@@ -8,7 +8,7 @@ import AlarmKit
 @main
 struct ChenkeApp: App {
     var body: some Scene {
-        WindowGroup { ChenkeWebView().background(Color(uiColor: .systemBackground)).ignoresSafeArea(.keyboard) }
+        WindowGroup { ChenkeWebView().background(Color(uiColor: .systemBackground)) }
     }
 }
 
@@ -17,6 +17,7 @@ struct CourseAlarmMetadata: AlarmMetadata {
 }
 
 struct ChenkeWebView: UIViewRepresentable {
+    @Environment(\.scenePhase) private var scenePhase
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -33,13 +34,27 @@ struct ChenkeWebView: UIViewRepresentable {
         }
         return web
     }
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        if scenePhase == .active {
+            uiView.evaluateJavaScript("window.chenkeNativeResume?.();", completionHandler: nil)
+        }
+    }
 
     @MainActor
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, UIDocumentPickerDelegate {
         weak var web: WKWebView?
         private var pickerRequest: String?
         private let alarmService = CourseAlarmService()
+        private var alarmTask: Task<[String: Any], Error>?
+        private func queueAlarm(_ operation: @escaping @MainActor () async throws -> [String: Any]) async throws -> [String: Any] {
+            let previous = alarmTask
+            let current = Task { @MainActor in
+                if let previous { _ = try? await previous.value }
+                return try await operation()
+            }
+            alarmTask = current
+            return try await current.value
+        }
         private var dataURL: URL {
             FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("chenke.json")
         }
@@ -70,9 +85,9 @@ struct ChenkeWebView: UIViewRepresentable {
                 return ["state": try JSONSerialization.jsonObject(with: Data(contentsOf: dataURL))]
             case "syncAlarms":
                 guard let plans = payload["plans"] as? [[String: Any]], plans.count <= 28 else { throw AppError("起床计划数量或格式不正确") }
-                return try await alarmService.reconcile(plans)
+                return try await queueAlarm { try await self.alarmService.reconcile(plans) }
             case "testAlarm":
-                return try await alarmService.test()
+                return try await queueAlarm { try await self.alarmService.test() }
             case "pickDocument":
                 guard pickerRequest == nil else { throw AppError("文件选择器已打开") }
                 pickerRequest = id
@@ -209,7 +224,7 @@ final class CourseAlarmService {
         let stop = AlarmButton(text: "关闭", textColor: .white, systemImageName: "stop.circle")
         let alert = AlarmPresentation.Alert(title: LocalizedStringResource(stringLiteral: "该起床啦 · \(course)"), stopButton: stop)
         let attributes = AlarmAttributes(presentation: AlarmPresentation(alert: alert), metadata: CourseAlarmMetadata(course: course), tintColor: Color.green)
-        let configuration = AlarmManager.AlarmConfiguration<CourseAlarmMetadata>(schedule: .fixed(date), attributes: attributes)
+        let configuration = AlarmManager.AlarmConfiguration<CourseAlarmMetadata>.alarm(schedule: .fixed(date), attributes: attributes, sound: .default)
         _ = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
     }
     func reconcile(_ plans: [[String: Any]]) async throws -> [String: Any] {
@@ -228,6 +243,10 @@ final class CourseAlarmService {
             catch { throw AppError("无法确认现有系统闹钟，保留原记录，请检查权限后重新更新：\(error.localizedDescription)") }
         }
         for (key, record) in records where !desired.contains(key) {
+            // A foreground refresh must not cancel the one-minute test.
+            if key == "chenke-test", let raw = record["fireAt"],
+               let date = parseDate(raw), date > Date().addingTimeInterval(-600),
+               let id = UUID(uuidString: record["uuid"] ?? ""), active.contains(id) { continue }
             if let id = UUID(uuidString: record["uuid"] ?? ""), active.contains(id) { try AlarmManager.shared.cancel(id: id) }
             records.removeValue(forKey: key); ledger = records
         }
@@ -246,10 +265,14 @@ final class CourseAlarmService {
     func test() async throws -> [String: Any] {
         try await authorized()
         var records = ledger
-        if let id = UUID(uuidString: records["chenke-test"]?["uuid"] ?? "") { try? AlarmManager.shared.cancel(id: id) }
+        if let id = UUID(uuidString: records["chenke-test"]?["uuid"] ?? "") {
+            let active = try AlarmManager.shared.alarms.contains { $0.id == id }
+            if active { try AlarmManager.shared.cancel(id: id) }
+        }
         let id = UUID(); let date = Date().addingTimeInterval(60)
         try await publish(id, date: date, course: "一分钟测试")
-        records["chenke-test"] = ["uuid": id.uuidString, "fireAt": ISO8601DateFormatter().string(from: date), "course": "一分钟测试"]; ledger = records
+        let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        records["chenke-test"] = ["uuid": id.uuidString, "fireAt": formatter.string(from: date), "course": "一分钟测试"]; ledger = records
         return ["message": "系统已接受测试闹钟。请锁屏，等待 1 分钟验证响铃。"]
     }
 }

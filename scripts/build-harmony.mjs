@@ -43,11 +43,13 @@ for(const candidate of [path.join(executableRoot,'sdk'),path.join(tools,'sdk')])
   if(await exists(path.join(candidate,'default','openharmony'))){sdk=candidate;break;}
 }
 if(!sdk)throw Error('工具包中未找到 sdk/default/openharmony；请使用完整官方工具包。');
-const java=await find(tools,process.platform==='win32'?'java.exe':'java');
-if(!java)throw Error('工具包中未找到 JDK/JBR。请确认下载的是完整 Command Line Tools。');
+const javaRoot=argument('--java')??process.env.JAVA_HOME;
+const java=javaRoot?await find(path.resolve(javaRoot),process.platform==='win32'?'java.exe':'java'):await find(tools,process.platform==='win32'?'java.exe':'java');
+if(!java)throw Error('未找到 JDK。官方命令行工具可能不含 Java，请用 --java 指定免费 JDK 17 目录。');
 const bundledNode=await find(tools,process.platform==='win32'?'node.exe':'node');
 const env={...process.env,JAVA_HOME:path.dirname(path.dirname(java)),DEVECO_SDK_HOME:sdk};
-env.PATH=[path.dirname(java),bundledNode?path.dirname(bundledNode):path.dirname(process.execPath),path.dirname(hvigor),env.PATH].join(path.delimiter);
+if(bundledNode)env.DEVECO_NODE_HOME=path.dirname(bundledNode);
+env.PATH=[path.dirname(java),bundledNode?path.dirname(bundledNode):path.dirname(process.execPath),path.dirname(hvigor),path.join(sdk,'default/openharmony/previewer/common/bin'),path.join(sdk,'default/hms/toolchains/lib'),env.PATH].join(path.delimiter);
 if(bundledNode)env.NODE_HOME=path.dirname(bundledNode);
 const stageParent=path.resolve(argument('--stage')??path.join(os.tmpdir(),'chenke-harmony-build'));
 if(process.platform==='win32'&&/[^\x00-\x7F]/.test(stageParent))throw Error('鸿蒙构建目录请使用不含中文的路径，例如 --stage D:/Plugin/HarmonyOSBuild。');
