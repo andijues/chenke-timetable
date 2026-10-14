@@ -25,10 +25,12 @@
 2. 从「导入」选择 PDF 或图片，校对课程名称、星期、时间与周次，确认后保存。示例课表不会发布闹钟。
 3. 在「起床」设置提前量，例如 90 分钟；8:30 第一节晨课对应 7:00 起床。
 4. 启用自动起床提醒，允许系统闹钟权限，检查页面是否明确显示系统已接受计划。
-5. 执行「测试 1 分钟后提醒」，锁屏等待。确认声音和关闭操作；再检查退出应用后的行为。
+5. 执行「测试 1 分钟后响铃」，锁屏等待。确认声音和关闭操作；再检查退出应用后的行为。
 6. 切换到下一天，核对无晨课日不会安排闹钟。修改课程或提前量后，检查系统同步反馈。
 
 应用只排未来 28 天，打开或返回应用时续排。未确认的课程不进入闹钟计划；实际课表识别结果仍需校对。
+
+请保持晨课应用未被隐藏、未被设置为“需要 Face ID/密码才能打开”。Apple 的 [AlarmKit 常见问题](https://developer.apple.com/forums/thread/797158)说明，这些应用保护状态会使 AlarmKit 闹钟失败。手机正常锁屏与应用自身要求认证是不同设置。
 
 ## 4. 免费续签
 
@@ -42,14 +44,14 @@
 
 源码：[andijues/chenke-timetable](https://github.com/andijues/chenke-timetable)。
 
-首次成功构建：[GitHub Actions 运行记录](https://github.com/andijues/chenke-timetable/actions/runs/38552993453)，Xcode 26.6 / iOS 26.5 SDK，源码提交 `4ac5feb63882db6eaeaca79d31a2b130c46dfdda`。
+最新成功构建：[GitHub Actions 运行记录](https://github.com/andijues/chenke-timetable/actions/runs/38575471683)，Xcode 26.6 / iOS 26.5 SDK，源码提交 `e5a77b64df753555579734148cf8da13ce64742e`。包含移动端输入、横屏、键盘弹窗、多行粘贴解析，以及原生闹钟调度队列修正。
 
 下载包已通过 ZIP 完整性检查，哈希与云端上传记录一致。IPA 内含 arm64 iPhone 程序、AlarmKit 及 224 个共享界面/离线资源文件；没有 Apple 签名和安装描述文件。IPA 的 SHA-256 为：
 
 ```text
-2e4c2cd2bcd46bec3eb861b495f3133ef0a45c4a3ec90c2bc77f9a8403932e01
+a3f110abe57e9a4dbcbf24084b31fce0b2a56d099974bc39c18774f36c9b7417
 ```
 
 GitHub 构建产物只保留 1 天，本机下载的 IPA 可以长期保存。以后更新源码，可在仓库 Actions 手动运行「Build iOS unsigned IPA」，下载新的产物，继续用同一账号签名安装。
 
-当前完成了云编译；个人签名、iPhone 安装及锁屏响铃还未经过实际验证。鸿蒙版仍需使用 DevEco Studio 编译和真机调试。
+当前完成了云编译；个人签名、iPhone 安装及锁屏响铃还未经过实际验证。鸿蒙版已编译、签名、安装并确认主页可打开，系统提醒仍需开通代理提醒能力并验收。

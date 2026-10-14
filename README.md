@@ -1,6 +1,6 @@
 # 晨课 · 个人课表
 
-一个零付费服务、无后台的个人课表项目。共享界面已可运行；鸿蒙与 iOS 原生工程已提供。**iOS 原生版已通过 GitHub 的 Xcode 云编译并生成未签名 IPA；个人签名、安装和真机响铃尚未验证。鸿蒙版仍需 SDK 编译与真机验证。**
+一个零付费服务、无服务器的个人课表项目。**鸿蒙版已通过官方 API 26 SDK 编译、调试签名和手机安装，启动闪退已修复，用户确认主页可打开。系统提醒仍返回1700002，需开通代理提醒能力并更新 Profile 后验收。iOS 版已完成 Xcode 云编译并生成未签名 IPA；个人签名、安装和真机响铃尚未验证。**
 
 用户设备：鸿蒙 7、最新版 iOS；只有 Windows，没有 Mac。
 
@@ -46,22 +46,24 @@ npm.cmd run test:ui
 
 ## 鸿蒙 7 安装
 
-鸿蒙工程已更新到 0.1.1，目标 API 26、最低 API 20，包名 `com.andijues.chenke`。修正已有提醒的查询、加入权限检查和前台返回时重新同步，明确使用闹钟声音通道。官方工具尚未获取成功，当前仍未编译/签名 HAP。
+鸿蒙工程为 0.1.1，目标 API 26、最低 API 20，包名 `com.andijues.chenke`。本机官方工具位于 `D:\command-line-tools`，已生成未签名及已签名 HAP。当前签名包仅适用于已登记的自己的手机。
 
 完整步骤和命令见 [Windows 构建与安装鸿蒙版](docs/Windows安装鸿蒙.md)。
 
-1. 在 Windows 安装官方 [DevEco Studio](https://developer.huawei.com/consumer/cn/deveco-studio/) 26.0.0，或下载配套 Command Line Tools 26.0.0.851。
-2. 命令行工具解压后，在项目目录运行 `node scripts/build-harmony.mjs --tools "D:/Plugin/HarmonyOS26" --stage "D:/Plugin/HarmonyOSBuild"`；脚本先在独立目录编译未签名 HAP，成功后才保存到 `output/晨课-鸿蒙-未签名.hap`。
-3. 登录自己的华为开发者账号，完成需要的认证，配置 **Automatic signing** 并关联自己的手机。
-4. 在 DevEco Studio 打开独立工程，手机开启开发者选项/USB 调试，连接电脑，在 IDE 点击运行。个人签名配置保留在独立工程中。
+1. 准备官方 Command Line Tools 26.0.0.851 和 JDK 17；此命令行工具包未自带 JDK。
+2. 使用 `scripts/build-harmony.mjs --tools ... --java ... --stage ...` 在独立目录编译，再使用 `scripts/verify-harmony-artifact.py` 检查内容。
+3. 通过实名认证华为开发者账号创建匹配包名的调试证书、自己的设备记录与 Profile。私钥和密码保存在项目外。
+4. 使用 `scripts/sign-harmony.mjs` 核对证书、单设备 Profile 后签名，以官方 HDC 覆盖安装。也可按官方 DevEco Studio 自动签名流程操作。
 5. 在应用中导入课表、校对晨课、启用自动提醒，并允许通知。
-6. 先执行「测试 1 分钟后提醒」，检查锁屏、声音、稍后提醒、退出应用、重启后的行为。签名有效期以实际平台为准。
+6. 先执行「测试 1 分钟后响铃」，检查锁屏、声音、稍后提醒、退出应用、重启后的行为。签名有效期以实际平台为准。
 
 这里的提醒由应用通过系统代理管理，**不等于往华为“时钟”App 的手动闹钟列表写入**。响铃的通知/闹钟通道表现必须在鸿蒙 7 真机上确认。按日期使用 Calendar 类型，避免把课程简单设成每周重复后在放假日误响。
 
+本次真机测试返回1700002，而晨课有效提醒数量为0；后台“代理提醒”能力原为“未申请”，Profile 中该开放能力为空。现已授权提交申请，平台显示“审核中”，页面提示审批3个工作日；获准后需取得对应 Profile 并重新签名。资料见 [代理提醒申请说明](docs/鸿蒙代理提醒申请.md)。不应因此删除手机其他应用或时钟的闹钟。
+
 ## iOS：只有 Windows 的免费安装路线
 
-源码已发布到 [chenke-timetable](https://github.com/andijues/chenke-timetable)，[2026-10-14 的云构建](https://github.com/andijues/chenke-timetable/actions/runs/38552993453)已成功。使用 Xcode 26.6、iOS 26.5 SDK，应用最低支持 iOS 26.0。构建源码提交为 `4ac5feb63882db6eaeaca79d31a2b130c46dfdda`。
+源码已发布到 [chenke-timetable](https://github.com/andijues/chenke-timetable)，[2026-10-14 的最新 iOS 云构建](https://github.com/andijues/chenke-timetable/actions/runs/38575471683)已成功，包含移动端和多行粘贴解析修正。使用 Xcode 26.6、iOS 26.5 SDK，应用最低支持 iOS 26.0。IPA 对应源码提交为 `e5a77b64df753555579734148cf8da13ce64742e`。
 
 本机安装包保存在 `output/晨课-iOS-未签名.ipa`。操作步骤见 [Windows 安装 iOS 版](docs/Windows安装iOS.md)。以后重新构建可按以下流程执行：
 

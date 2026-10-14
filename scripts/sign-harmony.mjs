@@ -21,7 +21,9 @@ function run(values){
   catch(error){const message=String(error.stdout??'')+'\n'+String(error.stderr??'');throw Error('华为签名工具未完成：'+message.replaceAll(secret.password,'[密码已隐藏]').slice(-4000));}
 }
 const decoded=path.join(directory,'verified-profile.json');run(['verify-profile','-inFile',profileFile,'-outFile',decoded]);
-const profile=JSON.parse(await readFile(decoded,'utf8'));
+const verified=JSON.parse(await readFile(decoded,'utf8'));
+if(verified.verifiedPassed!==true)throw Error('Profile 的官方签名校验未通过');
+const profile=typeof verified.content==='string'?JSON.parse(verified.content):verified.content;
 const ids=profile['debug-info']?.['device-ids'];
 if(profile.type!=='debug'||profile['bundle-info']?.['bundle-name']!=='com.andijues.chenke'||!Array.isArray(ids)||ids.length!==1||ids[0]!==device.udid)throw Error('Profile 必须是晨课专用、仅绑定当前手机的调试文件');
 const input=path.join(root,'output/晨课-鸿蒙-未签名.hap'),output=path.join(root,'output/晨课-鸿蒙-已签名.hap');

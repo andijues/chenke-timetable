@@ -1,12 +1,13 @@
 # 在 Windows 构建和安装晨课鸿蒙版
 
-本项目为鸿蒙原生 HAP 工程，针对用户的鸿蒙 7 更新，目标 API 26，最低 API 20。当前源码已更新；官方 SDK 编译、个人签名及手机锁屏响铃尚待验证。本文说明实际构建流程，不把网页测试当成真机结果。
+本项目为鸿蒙原生 HAP 工程，目标 API 26，最低 API 20。2026-10-14 已完成官方 SDK 编译、单设备调试签名和 USB 覆盖安装；启动闪退已修复，用户确认主页可打开。系统提醒仍返回1700002，代理提醒能力申请已提交，平台显示“审核中”，响铃尚未验收。
 
 ## 获取官方工具
 
 1. 在 [华为下载中心](https://developer.huawei.com/consumer/cn/download/)用自己的实名认证开发者账号登录。
 2. 下载 **Command Line Tools for Windows 26.0.0.851**。工具包约 2.5 GB，包含相应版本 SDK。
-3. 按下载页的 SHA-256 校验工具包，再解压到不含中文或特殊符号的目录，例如 `D:\Plugin\HarmonyOS26`。保留完整目录层次。
+3. 按下载页的 SHA-256 校验工具包，再解压到不含中文或特殊符号的目录。本机工具路径为 `D:\command-line-tools`，保留完整目录层次。
+4. 此命令行工具包未自带 Java。使用另行下载并校验的免费 Temurin JDK 17，本机位于 `D:\ChenkeHarmonyBuild\tools\jdk17\jdk-17.0.20.1+1`。
 
 官方工具获取和版本升级规则见 [命令行工具指南](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/ide-commandline-get)与 [API 26 适配指南](https://developer.huawei.com/consumer/en/doc/harmonyos-releases/upgrade-adaptation)。
 
@@ -18,17 +19,34 @@
 npm.cmd ci --ignore-scripts
 npm.cmd run assets
 npm.cmd run build
-node scripts/build-harmony.mjs --tools "D:/Plugin/HarmonyOS26" --stage "D:/Plugin/HarmonyOSBuild"
+node scripts/build-harmony.mjs --tools D:/command-line-tools --java D:/ChenkeHarmonyBuild/tools/jdk17 --stage D:/ChenkeHarmonyBuild
 python -X utf8 scripts/verify-harmony-artifact.py
 ```
 
-脚本使用官方工具包里的 JDK、Node、Hvigor 和 SDK，在独立目录编译。它只生成未签名 HAP，保留源工程；不会把个人签名配置写进 Git 仓库，也不修改系统环境变量。
+脚本使用另行指定的 JDK 和工具包中的 Node、Hvigor、SDK，在独立英文路径编译。它只生成未签名 HAP，保留源工程；不把个人签名配置写进 Git 仓库，不修改系统环境变量。restool 缺少同目录 DLL 时，仅补充工具包中已有的官方 DLL，不覆盖已有文件。
 
 编译成功才会生成 `output/晨课-鸿蒙-未签名.hap` 和 `reports/harmony-build.json`。日志位于 `reports/harmony-build.log`。工具不完整或编译失败时，不会把源码改名成安装包。
 
 如果已经装有对应版本的 DevEco Studio，也可用 `--tools` 指向其安装目录。实际工具包结构或 SDK 版本不同，可能需要调整构建配置；以真实编译结果为准。
 
-## 给自己的手机签名安装
+## 本机已有签名资料
+
+本次通过华为开发者账号创建了匹配包名的调试证书、自己的设备记录与 Profile。私钥和密码保存在项目外的 `D:\ChenkeHarmonySigning\chenke-1791984176207`。已有资料时不用每次生成新密钥：
+
+```powershell
+node scripts/sign-harmony.mjs --java D:/ChenkeHarmonyBuild/tools/jdk17/jdk-17.0.20.1+1/bin/java.exe --tools D:/command-line-tools --signing D:/ChenkeHarmonySigning/chenke-1791984176207
+$chenkeHdc = 'D:\command-line-tools\sdk\default\openharmony\toolchains\hdc.exe'
+& $chenkeHdc list targets
+Copy-Item -LiteralPath output\晨课-鸿蒙-已签名.hap -Destination D:\ChenkeHarmonyBuild\install\chenke.hap -Force
+& $chenkeHdc install -r D:\ChenkeHarmonyBuild\install\chenke.hap
+& $chenkeHdc shell aa start -a EntryAbility -b com.andijues.chenke
+```
+
+先确认本次编译成功，再签名和安装，避免误用旧包。签名脚本核对证书公钥、包名及单设备 Profile，并调用官方工具验签。多台手机连接时，使用 `-t` 明确指定设备。覆盖安装保留应用数据；当前包仅适用于已登记的这台手机。
+
+首次准备可使用 `scripts/prepare-harmony-signing.mjs` 在项目外生成 P12 和公开 CSR；通过自己的华为账号申请证书与 Profile。证书文件命名为 `app-debug.cer`、Profile 为 `debug-profile.p7b`，与本机设备核对记录 `device.json` 放在该签名目录。不要公开私钥、密码或设备标识。
+
+## 另一种方式：DevEco Studio 自动签名
 
 未签名 HAP 不能直接安装到鸿蒙手机。签名需关联自己的开发者账号和设备。
 
@@ -42,11 +60,13 @@ python -X utf8 scripts/verify-harmony-artifact.py
 
 ## 导入与响铃验收
 
+本次设备查询显示晨课有0个有效提醒，发布测试仍返回1700002。华为后台原显示代理提醒“未申请”，下载 Profile 的开放能力为空。现已提交学习类起床提醒申请，状态“审核中”，页面提示3个工作日。获准后需取得包含代理提醒能力的新 Profile，重新签名安装。申请说明见 [鸿蒙代理提醒申请](鸿蒙代理提醒申请.md)。不应因此删除手机其他应用或时钟的闹钟。
+
 1. 在「设置」输入真实学期第 1 周的星期一、总周数和学校节次时间。
 2. 导入 PDF 或图片，核对课程名称、星期、起止时间、周次，确认后保存。
 3. 在「闹钟」设定提前量，例如第一节 8:30、提前 90 分钟，对应 7:00 起床。
 4. 启用自动提醒，允许通知，检查是否显示系统已接受计划。拒绝权限时，页面会显示失败原因。
-5. 执行「测试 1 分钟后提醒」，锁屏等待，检查铃声、关闭和稍后提醒。
+5. 执行「测试 1 分钟后响铃」，退出应用并锁屏等待，检查铃声、关闭和稍后提醒。
 6. 再分别检查退出应用、重启、静音/勿扰状态，以及无晨课、停课日和修改课程后的计划。
 
 使用的是系统后台代理提醒，以具体日期发布，并采用闹钟声音通道。它的锁屏和勿扰表现仍需手机测试，不宣称会出现在华为「时钟」的手动闹钟列表中。
@@ -63,4 +83,4 @@ python -X utf8 scripts/verify-harmony-artifact.py
 - 返回授权对话框后保留一分钟测试，防止课程计划同步误取消测试提醒。
 - 新增 Windows 命令行构建和 HAP 内容校验脚本。
 
-当前通过 18 项规则/解析测试和 7 项浏览器检查；其中新增的是模拟鸿蒙桥接的前台返回、权限撤销与恢复流程。模拟桥接不等于设备 API、手机安装或实际响铃已经通过。
+共享界面通过19项规则/解析测试和12项浏览器检查，覆盖320px小屏、390px竖屏、844px横屏、短视口编辑及两种原生桥接模拟。鸿蒙另通过官方编译、签名、安装和主页打开；系统响铃因开放能力待审批，未验收。手机安装与启动记录和闹钟验收记录分开保存。

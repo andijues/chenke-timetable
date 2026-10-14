@@ -40,7 +40,10 @@ class HarmonyBridge {
     }
   }
   private reply(value: BridgeResponse): void {
-    this.controller.runJavaScript(`window.chenkeNativeResult(${JSON.stringify(value)});`).catch(() => {});
+    // The controller can detach while a system permission or file dialog is open.
+    try {
+      this.controller.runJavaScript(`window.chenkeNativeResult(${JSON.stringify(value)});`).catch(() => {});
+    } catch { /* The page will reconcile persisted state when it returns. */ }
   }
   private async getStore(): Promise<preferences.Preferences> {
     if (!this.store) this.store = await preferences.getPreferences(this.context, {name: 'chenke'});
@@ -121,7 +124,11 @@ class HarmonyBridge {
   }
   private async handle(action: string, payload: BridgePayload): Promise<BridgeResult> {
     switch (action) {
-      case 'capabilities': return {platform: 'harmony', supported: true, mode: 'pending', message: '鸿蒙系统代理提醒就绪，启用后请求通知权限。'};
+      case 'capabilities': {
+        const active = await reminderAgentManager.getAllValidReminders();
+        console.info(`[Chenke] own active reminders: ${active.length}`);
+        return {platform: 'harmony', supported: true, mode: 'pending', message: '鸿蒙系统代理提醒就绪，启用后请求通知权限。'};
+      }
       case 'saveState': {
         if (!payload.state) throw new Error('课表格式无效');
         const store = await this.getStore(); await store.put('state', JSON.stringify(payload.state)); await store.flush(); return {saved: true};
@@ -139,7 +146,18 @@ class HarmonyBridge {
           if (active.some(info => info.reminderId === old.reminderId)) await reminderAgentManager.cancelReminder(old.reminderId);
         }
         const date = new Date(Date.now() + 60000);
-        const id = await this.publish({id: 'chenke-test', fireAt: date.toISOString(), date: '', course: '一分钟测试', courseStart: ''}, 999999);
+        let id: number;
+        try {
+          id = await this.publish({id: 'chenke-test', fireAt: date.toISOString(), date: '', course: '一分钟测试', courseStart: ''}, 999999);
+        } catch (e) {
+          const error = e as BusinessError;
+          if (error.code === 1700002) {
+            const active = await reminderAgentManager.getAllValidReminders();
+            console.error(`[Chenke] publish test rejected: 1700002; own active reminders: ${active.length}`);
+            throw new Error(`系统拒绝提醒（1700002），晨课当前有 ${active.length} 个有效提醒。请检查应用的代理提醒开放能力与签名 Profile。`);
+          }
+          throw new Error(`${error.message || '系统未接受测试提醒'}${error.code ? ` (${error.code})` : ''}`);
+        }
         ledger = ledger.filter(item => item.key !== 'chenke-test'); ledger.push({key: 'chenke-test', reminderId: id, fireAt: date.toISOString(), course: '一分钟测试'}); await this.writeLedger(ledger);
         return {message: '系统已接受一分钟测试提醒，请锁屏验证响铃。'};
       }
@@ -161,8 +179,14 @@ class HarmonyBridge {
 struct Index {
   private controller: webview.WebviewController = new webview.WebviewController();
   private bridge: HarmonyBridge = new HarmonyBridge(getContext(this) as common.UIAbilityContext, this.controller);
+  private pageReady: boolean = false;
+  private runPageScript(script: string): void {
+    // runJavaScript can throw synchronously before the Web component attaches.
+    if (!this.pageReady) return;
+    try { this.controller.runJavaScript(script).catch(() => {}); } catch { }
+  }
   onPageShow(): void {
-    this.controller.runJavaScript('window.chenkeNativeResume && window.chenkeNativeResume();').catch(() => {});
+    this.runPageScript('window.chenkeNativeResume && window.chenkeNativeResume();');
   }
   private localResponse(url: string): WebResourceResponse {
     const response = new WebResourceResponse();
@@ -198,8 +222,10 @@ struct Index {
           dialog.select(options).then(uris => event.result.handleFileList(uris)).catch(() => event.result.handleFileList([]));
           return true;
         })
+        .onPageBegin(() => { this.pageReady = false; })
         .onPageEnd(() => {
-          this.controller.runJavaScript("window.__chenkePlatform='harmony';window.chenkeNativeReady&&window.chenkeNativeReady();").catch(() => {});
+          this.pageReady = true;
+          this.runPageScript("window.__chenkePlatform='harmony';window.chenkeNativeReady&&window.chenkeNativeReady();");
         })
         .width('100%').height('100%')
     }.width('100%').height('100%').backgroundColor('#F5F7F6')

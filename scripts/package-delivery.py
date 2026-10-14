@@ -21,7 +21,8 @@ with zipfile.ZipFile(web,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
 manifest=[]
 ipa=out/'晨课-iOS-未签名.ipa'
 hap=out/'晨课-鸿蒙-未签名.hap'
-for p in [archive,web]+([ipa] if ipa.exists() else [])+([hap] if hap.exists() else []):
+signed_hap=out/'晨课-鸿蒙-已签名.hap'
+for p in [archive,web]+[p for p in [ipa,hap,signed_hap] if p.exists()]:
     digest=hashlib.sha256(p.read_bytes()).hexdigest()
     with zipfile.ZipFile(p) as z:
         assert z.testzip() is None

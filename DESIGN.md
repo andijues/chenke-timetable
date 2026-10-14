@@ -64,7 +64,7 @@ typography:
     fontWeight: 400
   field:
     fontFamily: "-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif"
-    fontSize: "13px"
+    fontSize: "16px"
     fontWeight: 400
   label:
     fontFamily: "-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif"
@@ -215,7 +215,7 @@ components:
 
 界面以中文阅读和个人校正为中心。手机保留横向课表与固定时间轴，桌面增加今日安排；按钮、输入框、短说明和原文对照形成直接的操作关系。圆角用于界定可操作表面，细网格负责时间参照。
 
-本文件只记录已实现的共享网页界面，依据 src/main.mjs、public/style.css、index.html 和 .impeccable/review 中的明暗截图。鸿蒙与 iOS 原生源的编译、安装、权限及响铃没有在本轮验证；界面中的系统成功状态必须来自原生回执，不能由视觉预览推定。
+本文件记录共享网页界面，依据 src/main.mjs、public/style.css、index.html 和 .impeccable/review 中的明暗截图。鸿蒙已另行完成编译、签名、安装及主页启动验证；系统提醒仍待开放能力审批和响铃验收。iOS云编译已通过，手机安装及响铃未验证。系统成功状态必须来自原生回执，不能由视觉预览推定。
 
 **Key Characteristics:**
 
@@ -274,7 +274,7 @@ sidecar 的八步 OKLCH 色阶是按已用颜色生成的色板预览元数据�
 - **Label / Button**（`label` / `button` / `text-button`）：表单标签与动作；小屏主按钮和部分次要文字按实际媒体查询调整。
 - **Course Title**（`course-title`；手机 `course-title-mobile`）：手机不压缩标题字号来塞入整周。手机课程地点与时间保留源码最终覆盖的（11px）字号。
 - **Wake Time / Lead Number**（`wake-time` / `lead-number`）：起床建议与提前分钟的大号数字；手机起床数字另调整为（27px）。
-- **Navigation**（`navigation` / `navigation-active`）：一级入口的普通与选中状态；手机标签字号为（10px）。
+- **Navigation**（`navigation` / `navigation-active`）：一级入口的普通与选中状态；手机标签字号为（12px）。
 
 当前实现仍有（9–10px）的辅助注释和部分桌面课表元数据。它们作为既有可读性残留记录，未纳入复用 typography tokens；手机实机可读性仍待验证，不能因当前页面使用了小字就把它扩展为默认正文。
 
@@ -287,6 +287,8 @@ sidecar 的八步 OKLCH 色阶是按已用颜色生成的色板预览元数据�
 共享网页容器的最大宽度为（1260px），居中，桌面左右留白各（42px）。桌面课表工作区采用主列加（280px）今日安排侧栏，列间距为（32px）；导入、闹钟和设置也按源码采用对应双列。画布不是整屏卡片集合，主要空间留给课表和编辑内容。
 
 在（980px）及以下，容器留白缩为（28px），工作区侧栏为（230px）、间距为（20px）。在（760px）及以下，主区域改为单列，左右留白为（20px），今日安排侧栏隐藏；底部导航铺满宽度，并保留顶部和底部安全区。桌面导航宽（420px）、高（70px）、距底（20px）；手机导航贴底，页面底部留足导航空间。
+
+手机布局也适用于宽度不超过1000px且高度不超过500px的横屏，以及无悬停、粗指针设备。左右安全区参与内容和导航留白。输入文字统一16px；编辑弹窗按visualViewport可用高度滚动，底部操作保持可达；359px以下成对字段改为单列。键盘遮挡较大且输入获得焦点时暂时隐藏底部导航。
 
 课表在桌面五日最小宽（420px）、七日最小宽（660px）；手机五日最小宽（560px）、七日最小宽（770px），以横向滚动保留课程列宽。手机时间轴宽（44px），桌面为（48px），均固定在滚动容器左侧；当前时间标签固定在同一轴中。不能把横向滚动处理成整页溢出。
 
@@ -313,7 +315,7 @@ sidecar 的八步 OKLCH 色阶是按已用颜色生成的色板预览元数据�
 
 表面和控制使用小圆角：frontmatter 的 `surface` 界定主内容区，`button` 和 `field` 保持按钮及输入框可辨识，`course` 用于课程块。手机课表表面与课程块采用各自手机项。桌面导航与编辑对话框共享更大的浮动圆角；手机导航回到直边。
 
-圆形只承担明确用途：今天日期、当前时刻圆点和开关滑块。开关轨道为（47px × 28px）、滑块为（22px），当前线为（1px），三角为（8px × 8px），圆点为（7px）。这些标记的位置来自同一时间坐标。未确认课程使用内侧虚线，导入区域使用虚线边界。
+圆形只承担明确用途：今天日期、当前时刻圆点和开关滑块。开关触控区域47px × 44px，轨道47px × 28px居中、滑块22px；当前线1px、三角8px × 8px、圆点7px。未确认课程使用内侧虚线，导入区域使用虚线边界。
 
 ## Components
 
@@ -328,6 +330,8 @@ sidecar 的八步 OKLCH 色阶是按已用颜色生成的色板预览元数据�
 ### Inputs / Fields
 
 纸白背景、细灰绿边、小圆角和最小（44px）高度。标签在输入框上方，留（7px）间距；成对字段用于星期/周次、开始/结束时间。表单校验错误保留文字，并通过 alert 语义提示。课程颜色选择使用真正的 radio 输入和文字标签，不使用只靠颜色区分的无名控件。
+
+颜色选项和确认动作至少44px可触达，长名称和地点可换行。导入复核在手机分行排列，编辑和移除动作保持44px高度。数值字段声明numeric输入模式；滑块高度44px。
 
 ### Navigation
 
