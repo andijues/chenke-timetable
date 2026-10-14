@@ -1,4 +1,4 @@
-import {cp, mkdir, readdir, readFile, writeFile, access} from 'node:fs/promises';
+import {cp, copyFile, mkdir, readdir, readFile, writeFile, access} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import path from 'node:path';
@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const argv=process.argv.slice(2);
 if(argv.includes('--help')){
-  console.log('node scripts/build-harmony.mjs --tools "D:/Plugin/HarmonyOS26/command-line-tools" [--stage "D:/Plugin/HarmonyOSBuild"]');
+  console.log('node scripts/build-harmony.mjs --tools "D:/command-line-tools" [--java "D:/JDK17"] [--stage "D:/ChenkeHarmonyBuild"]');
   console.log('使用官方工具编译未签名 HAP；签名文件和个人密码不会写入源码。');
   process.exit(0);
 }
@@ -43,13 +43,31 @@ for(const candidate of [path.join(executableRoot,'sdk'),path.join(tools,'sdk')])
   if(await exists(path.join(candidate,'default','openharmony'))){sdk=candidate;break;}
 }
 if(!sdk)throw Error('工具包中未找到 sdk/default/openharmony；请使用完整官方工具包。');
+// Windows restool resolves its transcoder dependencies beside the executable.
+// CLI 26 ships those DLLs elsewhere in the same SDK. Add only absent files.
+if(process.platform==='win32'){
+  const dlls=['libimage_transcoder_shared.dll','libtextureSuperCompress.dll','libhilog.dll','libsec_shared.dll','liblz4_shared.dll','libastc_encoder_shared.dll','libcjson.dll','libskia_canvaskit.dll','libexpat.dll','libjsoncpp.dll','libhmicuuc.dll'];
+  let added=0;
+  for(const name of dlls){
+    const destination=path.join(sdk,'default/openharmony/toolchains',name);
+    if(await exists(destination))continue;
+    for(const directory of ['default/hms/toolchains/lib','default/openharmony/previewer/common/bin']){
+      const source=path.join(sdk,directory,name);
+      if(await exists(source)){await copyFile(source,destination,1);added++;break;}
+    }
+  }
+  if(added)console.log(`已用同一官方 SDK 补齐 ${added} 个资源编译依赖。`);
+}
 const javaRoot=argument('--java')??process.env.JAVA_HOME;
 const java=javaRoot?await find(path.resolve(javaRoot),process.platform==='win32'?'java.exe':'java'):await find(tools,process.platform==='win32'?'java.exe':'java');
 if(!java)throw Error('未找到 JDK。官方命令行工具可能不含 Java，请用 --java 指定免费 JDK 17 目录。');
 const bundledNode=await find(tools,process.platform==='win32'?'node.exe':'node');
 const env={...process.env,JAVA_HOME:path.dirname(path.dirname(java)),DEVECO_SDK_HOME:sdk};
 if(bundledNode)env.DEVECO_NODE_HOME=path.dirname(bundledNode);
-env.PATH=[path.dirname(java),bundledNode?path.dirname(bundledNode):path.dirname(process.execPath),path.dirname(hvigor),path.join(sdk,'default/openharmony/previewer/common/bin'),path.join(sdk,'default/hms/toolchains/lib'),env.PATH].join(path.delimiter);
+const pathKeys=Object.keys(env).filter(key=>key.toLowerCase()==='path');
+const originalPath=env[pathKeys[0]]??'';
+for(const key of pathKeys)delete env[key];
+env[process.platform==='win32'?'Path':'PATH']=[path.dirname(java),bundledNode?path.dirname(bundledNode):path.dirname(process.execPath),path.dirname(hvigor),path.join(sdk,'default/openharmony/previewer/common/bin'),path.join(sdk,'default/hms/toolchains/lib'),originalPath].join(path.delimiter);
 if(bundledNode)env.NODE_HOME=path.dirname(bundledNode);
 const stageParent=path.resolve(argument('--stage')??path.join(os.tmpdir(),'chenke-harmony-build'));
 if(process.platform==='win32'&&/[^\x00-\x7F]/.test(stageParent))throw Error('鸿蒙构建目录请使用不含中文的路径，例如 --stage D:/Plugin/HarmonyOSBuild。');
@@ -85,6 +103,8 @@ async function run(command,args){
 }
 console.log(`官方 SDK：${sdk}\n独立构建目录：${stage}`);
 try{
+  const ohpm=await find(tools,process.platform==='win32'?'ohpm.bat':'ohpm');
+  if(ohpm)await run(ohpm,['install','--all']);
   await run(hvigor,['--mode','module','-p','product=default','-p','module=entry@default','-p','buildMode=debug','assembleHap','--no-daemon']);
 }finally{await writeFile(logFile,log);}
 const output=path.join(stage,'entry/build/default/outputs/default');

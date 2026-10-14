@@ -8,3 +8,11 @@ test('节次可修改，推算必须显示校对原因',()=>{const cfg=structure
 test('没有时间仍保留为待校正，而不是丢弃课程',()=>{const c=courseFromText('机器学习\n信息楼502',{day:3},settings);assert.match(c.reasons.join(','),/未找到上课时间/);assert.equal(c.confirmed,false);});
 test('文字表格按星期列与时间行分组',()=>{const item=(text,x,y,width=65)=>({text,x,y,width,height:12});const page={width:600,height:800,items:[item('周一',100,20),item('周二',210,20),item('周三',320,20),item('周四',430,20),item('周五',540,20),item('1-2节',4,70,50),item('高等数学',85,70),item('1-16周',85,87),item('理学楼A302',85,104),item('英语',202,70),item('08:30-10:10',196,87,90),item('1-18周',202,104)]};const r=parsePositionedPage(page,settings);assert.equal(r.method,'grid');assert.equal(r.courses.length,2);assert.equal(r.courses[0].day,1);assert.equal(r.courses[1].day,2);});
 test('空识别展示恢复方案',()=>{const r=parseTimetable({pages:[],text:''},settings);assert.equal(r.courses.length,0);assert.equal(r.warnings.length,1);});
+
+test('粘贴分行课程保留后面的星期、直接时间、周次与地点',()=>{
+  const text='高性能计算\n周四 09:30-11:10\n2-16双周\n计算机楼 502\n\n研究方法\n周五 10:30-12:10\n1-16周\n图书馆 303';
+  const result=parseTimetable({text},settings);assert.equal(result.courses.length,2);
+  assert.equal(result.courses[0].day,4);assert.equal(result.courses[0].start,'09:30');assert.equal(result.courses[0].end,'11:10');
+  assert.deepEqual(result.courses[0].weeks,[2,4,6,8,10,12,14,16]);assert.equal(result.courses[0].location,'计算机楼 502');assert.deepEqual(result.courses[0].reasons,[]);
+  assert.equal(result.courses[1].day,5);assert.equal(result.courses[1].start,'10:30');assert.equal(result.courses[1].confirmed,false);
+});

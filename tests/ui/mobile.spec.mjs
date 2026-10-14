@@ -37,6 +37,7 @@ for(const [name,width,height] of [['small-phone',320,740],['phone',390,844],['la
     await page.getByRole('button',{name:'导入',exact:true}).tap();
     await page.locator('#paste-text').fill('高性能计算与智能信息处理综合研究课程\n周四 08:30-10:10\n1-16周\n计算机楼 502');
     await page.getByRole('button',{name:'识别文字',exact:true}).tap();await expect(page.locator('.review-row')).toHaveCount(1);
+    await expect(page.locator('.review-row')).toContainText('周四');await expect(page.locator('.review-row')).not.toContainText('未找到');
     await expectTouchSize(page.locator('.review-row button'));await expectNoPageOverflow(page);
     await page.screenshot({path:`.impeccable/review/${name}-review.png`,fullPage:true});
     await page.getByRole('button',{name:'设置',exact:true}).tap();await expectNoPageOverflow(page);

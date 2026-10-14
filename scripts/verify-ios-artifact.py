@@ -12,9 +12,14 @@ out = root / 'output'
 receipt = json.loads((root / 'reports/ios-artifact-download.json').read_text(encoding='utf-8'))
 archive = root / receipt['file']
 assert hashlib.sha256(archive.read_bytes()).hexdigest() == receipt['sha256']
-log = (root / 'reports/ios-job-115815214626.log').read_text(encoding='utf-8')
-uploaded_digest = re.search(r'SHA256 digest of uploaded artifact zip is ([a-f0-9]{64})', log)
-assert uploaded_digest and uploaded_digest.group(1) == receipt['sha256']
+matching_logs=[]
+for log_path in (root/'reports').glob('ios-job-*.log'):
+    log_text=log_path.read_text(encoding='utf-8')
+    digest=re.search(r'SHA256 digest of uploaded artifact zip is ([a-f0-9]{64})', log_text)
+    if digest and digest.group(1)==receipt['sha256']:
+        matching_logs.append((log_path,log_text))
+assert len(matching_logs)==1, 'Expected one cloud job log matching the artifact SHA-256'
+log_path,log=matching_logs[0]
 with zipfile.ZipFile(archive) as artifact:
     assert artifact.testzip() is None
     assert artifact.namelist() == ['Chenke-unsigned.ipa'], artifact.namelist()
@@ -57,6 +62,7 @@ report = {
     'runId': receipt['runId'],
     'buildUrl': f"https://github.com/andijues/chenke-timetable/actions/runs/{receipt['runId']}",
     'sourceCommit': receipt['commit'],
+    'jobId': int(log_path.stem.removeprefix('ios-job-')),
     'build': 'success',
     'xcode': xcode.group(1) if xcode else None,
     'sdk': info.get('DTSDKName'),

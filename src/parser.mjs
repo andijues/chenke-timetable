@@ -123,7 +123,11 @@ export function parseTextRows(rows, settings) {
   for (const raw of rows) {
     const line=clean(raw); if (!line) {flush();continue;}
     if (parseDay(line)&&line.length<8) {flush();day=parseDay(line);continue;}
-    if (parseDay(line)&& (timeRange(line)||/节/.test(line))) {flush(); const c=courseFromText(line.split(/\s{2,}|\|/).join('\n'),{day},settings);if(c)result.push(c);continue;}
+    if (parseDay(line)&& (timeRange(line)||/节/.test(line))) {
+      const c=courseFromText(line.split(/\s{2,}|\|/).join('\n'),{day},settings);
+      if(c){flush();result.push(c);}else{buffer.push(line);}
+      continue;
+    }
     if (buffer.length && (timeRange(buffer.join(' '))||/周/.test(buffer.join(' '))) && !timeRange(line)&& !/(?:周|节|楼|室|教师|地点|教室)/.test(line) && buffer.length>=2) flush();
     buffer.push(line);
   }
