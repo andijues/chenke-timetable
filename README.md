@@ -1,6 +1,6 @@
 # 晨课 · 个人课表
 
-一个零付费服务、无后台的个人课表项目。共享界面已可运行；鸿蒙与 iOS 原生工程已提供。**手机安装包尚未经过 SDK 编译、签名和真机验证，不能把电脑预览当成自动闹钟已可用。**
+一个零付费服务、无后台的个人课表项目。共享界面已可运行；鸿蒙与 iOS 原生工程已提供。**iOS 原生版已通过 GitHub 的 Xcode 云编译并生成未签名 IPA；个人签名、安装和真机响铃尚未验证。鸿蒙版仍需 SDK 编译与真机验证。**
 
 用户设备：鸿蒙 7、最新版 iOS；只有 Windows，没有 Mac。
 
@@ -21,6 +21,8 @@
 
 ```powershell
 npm.cmd ci
+npm.cmd run assets
+npm.cmd run build
 npm.cmd run preview
 ```
 
@@ -55,7 +57,9 @@ npm.cmd run test:ui
 
 ## iOS：只有 Windows 的免费安装路线
 
-源码和 `.github/workflows/ios-build.yml` 已准备；当前尚未发布到 GitHub、触发云构建或生成 IPA。
+源码已发布到 [chenke-timetable](https://github.com/andijues/chenke-timetable)，[2026-10-14 的云构建](https://github.com/andijues/chenke-timetable/actions/runs/38552993453)已成功。使用 Xcode 26.6、iOS 26.5 SDK，应用最低支持 iOS 26.0。构建源码提交为 `4ac5feb63882db6eaeaca79d31a2b130c46dfdda`。
+
+本机安装包保存在 `output/晨课-iOS-未签名.ipa`。操作步骤见 [Windows 安装 iOS 版](docs/Windows安装iOS.md)。以后重新构建可按以下流程执行：
 
 1. 将项目源码放到**你确认公开的 GitHub 仓库**。免费云构建只面向标准公共仓库；工作流遇到私有仓库直接跳过。
 2. 在 Actions 页面手动运行 **Build iOS unsigned IPA**。流程先构建共享界面，再在 GitHub 的标准 Mac runner 运行 Xcode，最后保存 `Chenke-unsigned-IPA`，仅保留 1 天。
@@ -66,7 +70,7 @@ npm.cmd run test:ui
 
 GitHub 标准公共 runner 的免费计算条件见 [官方计费文档](https://docs.github.com/en/billing/concepts/product-billing/github-actions)。仍应保持账号 Actions/存储预算为 0，避免选择付费大型 runner、私有仓库超额或长期堆积 artifact。Sideloadly 官方说明支持免费 Apple ID，Apple [官方限制](https://developer.apple.com/help/account/basics/about-your-developer-account)说明了 7 天安装签名有效期。
 
-这条路线**尚未在你的 GitHub 账号和 iPhone 上验证**。不承诺免费账号上的 AlarmKit 权限、未来系统版本和第三方签名工具永远兼容。
+云编译已在这个公开仓库成功运行；**免费 Apple ID 签名及 iPhone 安装、AlarmKit 授权、锁屏响铃还需实际验证**。构建成功不能代替真机测试。
 
 ### 如果以后能使用 Mac
 

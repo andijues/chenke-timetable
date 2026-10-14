@@ -21,7 +21,10 @@ native/harmony/entry/src/main/resources/rawfile/web/
 reports/
 .impeccable/review/
 output/
+/build/
 *.traineddata
+__pycache__/
+*.pyc
 /scripts/github-personal.mjs
 /scripts/debug-import.mjs
 /scripts/debug-ocr.mjs
