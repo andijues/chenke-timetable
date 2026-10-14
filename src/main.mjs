@@ -128,5 +128,8 @@ globalThis.chenkeNativeReady=()=>{
   capabilities().then(c=>{nativeCaps=c;if(c.message)nativeStatus={mode:c.mode??'pending',scheduled:0,message:c.message};}).catch(e=>{nativeStatus={mode:'error',message:e.message};});
   callNative('loadState').then(data=>{if(data?.state){state=validateState(data.state);render();}syncFingerprint='';sync();}).catch(e=>toast(`设备记录读取失败：${e.message}`));
 };
+globalThis.chenkeNativeResume=()=>{
+  if(nativeInitialized&&platform()!=='web')sync(true);
+};
 if(platform()!=='web')globalThis.chenkeNativeReady();else{capabilities().then(c=>nativeCaps=c);sync();}
 if('serviceWorker'in navigator&&/^https?:$/.test(location.protocol)&&!import.meta.env.DEV)navigator.serviceWorker.register('./sw.js').catch(()=>{});

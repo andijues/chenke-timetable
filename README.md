@@ -46,10 +46,14 @@ npm.cmd run test:ui
 
 ## 鸿蒙 7 安装
 
-1. 在 Windows 安装官方 [DevEco Studio](https://developer.huawei.com/consumer/cn/deveco-studio/)。打开 `native/harmony`。
-2. 按 IDE 提示安装对应 HarmonyOS SDK。当前工程兼容 API 12、目标 API 20；如果你的 IDE 缺少目标 SDK，使用 IDE 的 SDK 管理器安装，或在产品配置中选择其支持的 SDK 后检查编译。
+鸿蒙工程已更新到 0.1.1，目标 API 26、最低 API 20，包名 `com.andijues.chenke`。修正已有提醒的查询、加入权限检查和前台返回时重新同步，明确使用闹钟声音通道。官方工具尚未获取成功，当前仍未编译/签名 HAP。
+
+完整步骤和命令见 [Windows 构建与安装鸿蒙版](docs/Windows安装鸿蒙.md)。
+
+1. 在 Windows 安装官方 [DevEco Studio](https://developer.huawei.com/consumer/cn/deveco-studio/) 26.0.0，或下载配套 Command Line Tools 26.0.0.851。
+2. 命令行工具解压后，在项目目录运行 `node scripts/build-harmony.mjs --tools "D:/Plugin/HarmonyOS26" --stage "D:/Plugin/HarmonyOSBuild"`；脚本先在独立目录编译未签名 HAP，成功后才保存到 `output/晨课-鸿蒙-未签名.hap`。
 3. 登录自己的华为开发者账号，完成需要的认证，配置 **Automatic signing** 并关联自己的手机。
-4. 手机开启开发者选项/USB 调试，连接电脑，在 IDE 点击运行。
+4. 在 DevEco Studio 打开独立工程，手机开启开发者选项/USB 调试，连接电脑，在 IDE 点击运行。个人签名配置保留在独立工程中。
 5. 在应用中导入课表、校对晨课、启用自动提醒，并允许通知。
 6. 先执行「测试 1 分钟后提醒」，检查锁屏、声音、稍后提醒、退出应用、重启后的行为。签名有效期以实际平台为准。
 

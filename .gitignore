@@ -22,6 +22,14 @@ reports/
 .impeccable/review/
 output/
 /build/
+/.tools/
+native/harmony/.hvigor-cache/
+native/harmony/entry/oh_modules/
+*.jks
+*.keystore
+*.p7s
+*.csr
+*.pem
 *.traineddata
 __pycache__/
 *.pyc
