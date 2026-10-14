@@ -1,0 +1,37 @@
+name: Build iOS unsigned IPA
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    # Standard hosted runners in PUBLIC repositories have free compute.
+    # Refuse private repositories to avoid consuming paid runner minutes.
+    if: github.event.repository.private == false
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare offline application
+        run: |
+          npm ci --ignore-scripts
+          npm run assets
+          npm run build
+      - name: Compile native iOS app
+        run: |
+          xcodebuild -version
+          xcodebuild -project native/ios/Chenke.xcodeproj -scheme Chenke -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
+      - name: Package for personal signing on Windows
+        run: |
+          mkdir -p build/package/Payload
+          cp -R build/ios/Build/Products/Release-iphoneos/Chenke.app build/package/Payload/
+          cd build/package
+          zip -q -r ../Chenke-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Chenke-unsigned-IPA
+          path: build/Chenke-unsigned.ipa
+          retention-days: 1

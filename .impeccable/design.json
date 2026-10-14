@@ -1,0 +1,813 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-14T10:10:46Z",
+  "title": "Design System: 晨课 · 个人课表",
+  "extensions": {
+    "colorMeta": {
+      "green": {
+        "role": "primary",
+        "displayName": "深松绿",
+        "canonical": "#164b42",
+        "tonalRamp": [
+          "oklch(15.00% 0.05737 179.64)",
+          "oklch(26.43% 0.05737 179.64)",
+          "oklch(37.86% 0.05737 179.64)",
+          "oklch(49.29% 0.05737 179.64)",
+          "oklch(60.71% 0.05737 179.64)",
+          "oklch(72.14% 0.05737 179.64)",
+          "oklch(83.57% 0.05737 179.64)",
+          "oklch(95.00% 0.05737 179.64)"
+        ]
+      },
+      "green-hover": {
+        "role": "primary",
+        "displayName": "松绿悬停",
+        "canonical": "#246252",
+        "tonalRamp": [
+          "oklch(15.00% 0.06906 173.22)",
+          "oklch(26.43% 0.06906 173.22)",
+          "oklch(37.86% 0.06906 173.22)",
+          "oklch(49.29% 0.06906 173.22)",
+          "oklch(60.71% 0.06906 173.22)",
+          "oklch(72.14% 0.06906 173.22)",
+          "oklch(83.57% 0.06906 173.22)",
+          "oklch(95.00% 0.06906 173.22)"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "冷白画布",
+        "canonical": "#f5f7f6",
+        "tonalRamp": [
+          "oklch(15.00% 0.00249 165.08)",
+          "oklch(26.43% 0.00249 165.08)",
+          "oklch(37.86% 0.00249 165.08)",
+          "oklch(49.29% 0.00249 165.08)",
+          "oklch(60.71% 0.00249 165.08)",
+          "oklch(72.14% 0.00249 165.08)",
+          "oklch(83.57% 0.00249 165.08)",
+          "oklch(95.00% 0.00249 165.08)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "纸白表面",
+        "canonical": "#fff",
+        "tonalRamp": [
+          "oklch(15.00% 0 0)",
+          "oklch(26.43% 0 0)",
+          "oklch(37.86% 0 0)",
+          "oklch(49.29% 0 0)",
+          "oklch(60.71% 0 0)",
+          "oklch(72.14% 0 0)",
+          "oklch(83.57% 0 0)",
+          "oklch(95.00% 0 0)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "深绿正文",
+        "canonical": "#203b35",
+        "tonalRamp": [
+          "oklch(15.00% 0.03496 178.19)",
+          "oklch(26.43% 0.03496 178.19)",
+          "oklch(37.86% 0.03496 178.19)",
+          "oklch(49.29% 0.03496 178.19)",
+          "oklch(60.71% 0.03496 178.19)",
+          "oklch(72.14% 0.03496 178.19)",
+          "oklch(83.57% 0.03496 178.19)",
+          "oklch(95.00% 0.03496 178.19)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "灰绿辅助文字",
+        "canonical": "#64776f",
+        "tonalRamp": [
+          "oklch(15.00% 0.02562 168.04)",
+          "oklch(26.43% 0.02562 168.04)",
+          "oklch(37.86% 0.02562 168.04)",
+          "oklch(49.29% 0.02562 168.04)",
+          "oklch(60.71% 0.02562 168.04)",
+          "oklch(72.14% 0.02562 168.04)",
+          "oklch(83.57% 0.02562 168.04)",
+          "oklch(95.00% 0.02562 168.04)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "浅灰绿网格",
+        "canonical": "#e5ece8",
+        "tonalRamp": [
+          "oklch(15.00% 0.00916 161.34)",
+          "oklch(26.43% 0.00916 161.34)",
+          "oklch(37.86% 0.00916 161.34)",
+          "oklch(49.29% 0.00916 161.34)",
+          "oklch(60.71% 0.00916 161.34)",
+          "oklch(72.14% 0.00916 161.34)",
+          "oklch(83.57% 0.00916 161.34)",
+          "oklch(95.00% 0.00916 161.34)"
+        ]
+      },
+      "mint": {
+        "role": "secondary",
+        "displayName": "薄荷课程底色",
+        "canonical": "#deeee2",
+        "tonalRamp": [
+          "oklch(15.00% 0.02331 153.45)",
+          "oklch(26.43% 0.02331 153.45)",
+          "oklch(37.86% 0.02331 153.45)",
+          "oklch(49.29% 0.02331 153.45)",
+          "oklch(60.71% 0.02331 153.45)",
+          "oklch(72.14% 0.02331 153.45)",
+          "oklch(83.57% 0.02331 153.45)",
+          "oklch(95.00% 0.02331 153.45)"
+        ]
+      },
+      "sky": {
+        "role": "secondary",
+        "displayName": "天空蓝课程底色",
+        "canonical": "#deedf5",
+        "tonalRamp": [
+          "oklch(15.00% 0.01931 230.70)",
+          "oklch(26.43% 0.01931 230.70)",
+          "oklch(37.86% 0.01931 230.70)",
+          "oklch(49.29% 0.01931 230.70)",
+          "oklch(60.71% 0.01931 230.70)",
+          "oklch(72.14% 0.01931 230.70)",
+          "oklch(83.57% 0.01931 230.70)",
+          "oklch(95.00% 0.01931 230.70)"
+        ]
+      },
+      "lavender": {
+        "role": "secondary",
+        "displayName": "浅紫课程底色",
+        "canonical": "#e9e5f4",
+        "tonalRamp": [
+          "oklch(15.00% 0.02054 298.18)",
+          "oklch(26.43% 0.02054 298.18)",
+          "oklch(37.86% 0.02054 298.18)",
+          "oklch(49.29% 0.02054 298.18)",
+          "oklch(60.71% 0.02054 298.18)",
+          "oklch(72.14% 0.02054 298.18)",
+          "oklch(83.57% 0.02054 298.18)",
+          "oklch(95.00% 0.02054 298.18)"
+        ]
+      },
+      "peach": {
+        "role": "secondary",
+        "displayName": "杏色课程底色",
+        "canonical": "#f6e7d9",
+        "tonalRamp": [
+          "oklch(15.00% 0.02487 65.58)",
+          "oklch(26.43% 0.02487 65.58)",
+          "oklch(37.86% 0.02487 65.58)",
+          "oklch(49.29% 0.02487 65.58)",
+          "oklch(60.71% 0.02487 65.58)",
+          "oklch(72.14% 0.02487 65.58)",
+          "oklch(83.57% 0.02487 65.58)",
+          "oklch(95.00% 0.02487 65.58)"
+        ]
+      },
+      "rose": {
+        "role": "secondary",
+        "displayName": "粉色课程底色",
+        "canonical": "#f4e0e5",
+        "tonalRamp": [
+          "oklch(15.00% 0.02286 0.56)",
+          "oklch(26.43% 0.02286 0.56)",
+          "oklch(37.86% 0.02286 0.56)",
+          "oklch(49.29% 0.02286 0.56)",
+          "oklch(60.71% 0.02286 0.56)",
+          "oklch(72.14% 0.02286 0.56)",
+          "oklch(83.57% 0.02286 0.56)",
+          "oklch(95.00% 0.02286 0.56)"
+        ]
+      },
+      "pointer": {
+        "role": "secondary",
+        "displayName": "当前时刻粉红",
+        "canonical": "#bf4565",
+        "tonalRamp": [
+          "oklch(15.00% 0.15791 7.65)",
+          "oklch(26.43% 0.15791 7.65)",
+          "oklch(37.86% 0.15791 7.65)",
+          "oklch(49.29% 0.15791 7.65)",
+          "oklch(60.71% 0.15791 7.65)",
+          "oklch(72.14% 0.15791 7.65)",
+          "oklch(83.57% 0.15791 7.65)",
+          "oklch(95.00% 0.15791 7.65)"
+        ]
+      },
+      "mint-ink": {
+        "role": "neutral",
+        "displayName": "薄荷课程文字",
+        "canonical": "#254c35",
+        "tonalRamp": [
+          "oklch(15.00% 0.05988 156.19)",
+          "oklch(26.43% 0.05988 156.19)",
+          "oklch(37.86% 0.05988 156.19)",
+          "oklch(49.29% 0.05988 156.19)",
+          "oklch(60.71% 0.05988 156.19)",
+          "oklch(72.14% 0.05988 156.19)",
+          "oklch(83.57% 0.05988 156.19)",
+          "oklch(95.00% 0.05988 156.19)"
+        ]
+      },
+      "sky-ink": {
+        "role": "neutral",
+        "displayName": "蓝色课程文字",
+        "canonical": "#234d62",
+        "tonalRamp": [
+          "oklch(15.00% 0.05861 232.60)",
+          "oklch(26.43% 0.05861 232.60)",
+          "oklch(37.86% 0.05861 232.60)",
+          "oklch(49.29% 0.05861 232.60)",
+          "oklch(60.71% 0.05861 232.60)",
+          "oklch(72.14% 0.05861 232.60)",
+          "oklch(83.57% 0.05861 232.60)",
+          "oklch(95.00% 0.05861 232.60)"
+        ]
+      },
+      "lavender-ink": {
+        "role": "neutral",
+        "displayName": "紫色课程文字",
+        "canonical": "#4e436c",
+        "tonalRamp": [
+          "oklch(15.00% 0.06829 295.59)",
+          "oklch(26.43% 0.06829 295.59)",
+          "oklch(37.86% 0.06829 295.59)",
+          "oklch(49.29% 0.06829 295.59)",
+          "oklch(60.71% 0.06829 295.59)",
+          "oklch(72.14% 0.06829 295.59)",
+          "oklch(83.57% 0.06829 295.59)",
+          "oklch(95.00% 0.06829 295.59)"
+        ]
+      },
+      "peach-ink": {
+        "role": "neutral",
+        "displayName": "杏色课程文字",
+        "canonical": "#6b4930",
+        "tonalRamp": [
+          "oklch(15.00% 0.05993 56.74)",
+          "oklch(26.43% 0.05993 56.74)",
+          "oklch(37.86% 0.05993 56.74)",
+          "oklch(49.29% 0.05993 56.74)",
+          "oklch(60.71% 0.05993 56.74)",
+          "oklch(72.14% 0.05993 56.74)",
+          "oklch(83.57% 0.05993 56.74)",
+          "oklch(95.00% 0.05993 56.74)"
+        ]
+      },
+      "rose-ink": {
+        "role": "neutral",
+        "displayName": "粉色课程文字",
+        "canonical": "#713b4b",
+        "tonalRamp": [
+          "oklch(15.00% 0.07801 2.01)",
+          "oklch(26.43% 0.07801 2.01)",
+          "oklch(37.86% 0.07801 2.01)",
+          "oklch(49.29% 0.07801 2.01)",
+          "oklch(60.71% 0.07801 2.01)",
+          "oklch(72.14% 0.07801 2.01)",
+          "oklch(83.57% 0.07801 2.01)",
+          "oklch(95.00% 0.07801 2.01)"
+        ]
+      },
+      "bg-dark": {
+        "role": "neutral",
+        "displayName": "夜间画布",
+        "canonical": "#14221e",
+        "tonalRamp": [
+          "oklch(15.00% 0.02087 174.67)",
+          "oklch(26.43% 0.02087 174.67)",
+          "oklch(37.86% 0.02087 174.67)",
+          "oklch(49.29% 0.02087 174.67)",
+          "oklch(60.71% 0.02087 174.67)",
+          "oklch(72.14% 0.02087 174.67)",
+          "oklch(83.57% 0.02087 174.67)",
+          "oklch(95.00% 0.02087 174.67)"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "夜间表面",
+        "canonical": "#1c2f28",
+        "tonalRamp": [
+          "oklch(15.00% 0.02808 169.19)",
+          "oklch(26.43% 0.02808 169.19)",
+          "oklch(37.86% 0.02808 169.19)",
+          "oklch(49.29% 0.02808 169.19)",
+          "oklch(60.71% 0.02808 169.19)",
+          "oklch(72.14% 0.02808 169.19)",
+          "oklch(83.57% 0.02808 169.19)",
+          "oklch(95.00% 0.02808 169.19)"
+        ]
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "夜间正文",
+        "canonical": "#e1eee5",
+        "tonalRamp": [
+          "oklch(15.00% 0.01827 155.80)",
+          "oklch(26.43% 0.01827 155.80)",
+          "oklch(37.86% 0.01827 155.80)",
+          "oklch(49.29% 0.01827 155.80)",
+          "oklch(60.71% 0.01827 155.80)",
+          "oklch(72.14% 0.01827 155.80)",
+          "oklch(83.57% 0.01827 155.80)",
+          "oklch(95.00% 0.01827 155.80)"
+        ]
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "夜间辅助文字",
+        "canonical": "#a1b8a9",
+        "tonalRamp": [
+          "oklch(15.00% 0.03300 156.95)",
+          "oklch(26.43% 0.03300 156.95)",
+          "oklch(37.86% 0.03300 156.95)",
+          "oklch(49.29% 0.03300 156.95)",
+          "oklch(60.71% 0.03300 156.95)",
+          "oklch(72.14% 0.03300 156.95)",
+          "oklch(83.57% 0.03300 156.95)",
+          "oklch(95.00% 0.03300 156.95)"
+        ]
+      },
+      "line-dark": {
+        "role": "neutral",
+        "displayName": "夜间网格",
+        "canonical": "#30483d",
+        "tonalRamp": [
+          "oklch(15.00% 0.03525 164.47)",
+          "oklch(26.43% 0.03525 164.47)",
+          "oklch(37.86% 0.03525 164.47)",
+          "oklch(49.29% 0.03525 164.47)",
+          "oklch(60.71% 0.03525 164.47)",
+          "oklch(72.14% 0.03525 164.47)",
+          "oklch(83.57% 0.03525 164.47)",
+          "oklch(95.00% 0.03525 164.47)"
+        ]
+      },
+      "green-dark": {
+        "role": "primary",
+        "displayName": "夜间交互绿",
+        "canonical": "#92c9aa",
+        "tonalRamp": [
+          "oklch(15.00% 0.07227 159.49)",
+          "oklch(26.43% 0.07227 159.49)",
+          "oklch(37.86% 0.07227 159.49)",
+          "oklch(49.29% 0.07227 159.49)",
+          "oklch(60.71% 0.07227 159.49)",
+          "oklch(72.14% 0.07227 159.49)",
+          "oklch(83.57% 0.07227 159.49)",
+          "oklch(95.00% 0.07227 159.49)"
+        ]
+      },
+      "green-fill-dark": {
+        "role": "primary",
+        "displayName": "夜间按钮绿",
+        "canonical": "#427e5d",
+        "tonalRamp": [
+          "oklch(15.00% 0.08208 158.00)",
+          "oklch(26.43% 0.08208 158.00)",
+          "oklch(37.86% 0.08208 158.00)",
+          "oklch(49.29% 0.08208 158.00)",
+          "oklch(60.71% 0.08208 158.00)",
+          "oklch(72.14% 0.08208 158.00)",
+          "oklch(83.57% 0.08208 158.00)",
+          "oklch(95.00% 0.08208 158.00)"
+        ]
+      },
+      "green-hover-dark": {
+        "role": "primary",
+        "displayName": "夜间按钮悬停",
+        "canonical": "#528f6c",
+        "tonalRamp": [
+          "oklch(15.00% 0.08377 157.46)",
+          "oklch(26.43% 0.08377 157.46)",
+          "oklch(37.86% 0.08377 157.46)",
+          "oklch(49.29% 0.08377 157.46)",
+          "oklch(60.71% 0.08377 157.46)",
+          "oklch(72.14% 0.08377 157.46)",
+          "oklch(83.57% 0.08377 157.46)",
+          "oklch(95.00% 0.08377 157.46)"
+        ]
+      },
+      "mint-dark": {
+        "role": "secondary",
+        "displayName": "夜间薄荷课程底色",
+        "canonical": "#264536",
+        "tonalRamp": [
+          "oklch(15.00% 0.04562 161.94)",
+          "oklch(26.43% 0.04562 161.94)",
+          "oklch(37.86% 0.04562 161.94)",
+          "oklch(49.29% 0.04562 161.94)",
+          "oklch(60.71% 0.04562 161.94)",
+          "oklch(72.14% 0.04562 161.94)",
+          "oklch(83.57% 0.04562 161.94)",
+          "oklch(95.00% 0.04562 161.94)"
+        ]
+      },
+      "sky-dark": {
+        "role": "secondary",
+        "displayName": "夜间蓝色课程底色",
+        "canonical": "#273e4b",
+        "tonalRamp": [
+          "oklch(15.00% 0.03663 234.03)",
+          "oklch(26.43% 0.03663 234.03)",
+          "oklch(37.86% 0.03663 234.03)",
+          "oklch(49.29% 0.03663 234.03)",
+          "oklch(60.71% 0.03663 234.03)",
+          "oklch(72.14% 0.03663 234.03)",
+          "oklch(83.57% 0.03663 234.03)",
+          "oklch(95.00% 0.03663 234.03)"
+        ]
+      },
+      "lavender-dark": {
+        "role": "secondary",
+        "displayName": "夜间紫色课程底色",
+        "canonical": "#3a324b",
+        "tonalRamp": [
+          "oklch(15.00% 0.04432 298.69)",
+          "oklch(26.43% 0.04432 298.69)",
+          "oklch(37.86% 0.04432 298.69)",
+          "oklch(49.29% 0.04432 298.69)",
+          "oklch(60.71% 0.04432 298.69)",
+          "oklch(72.14% 0.04432 298.69)",
+          "oklch(83.57% 0.04432 298.69)",
+          "oklch(95.00% 0.04432 298.69)"
+        ]
+      },
+      "peach-dark": {
+        "role": "secondary",
+        "displayName": "夜间杏色课程底色",
+        "canonical": "#49382d",
+        "tonalRamp": [
+          "oklch(15.00% 0.03044 54.41)",
+          "oklch(26.43% 0.03044 54.41)",
+          "oklch(37.86% 0.03044 54.41)",
+          "oklch(49.29% 0.03044 54.41)",
+          "oklch(60.71% 0.03044 54.41)",
+          "oklch(72.14% 0.03044 54.41)",
+          "oklch(83.57% 0.03044 54.41)",
+          "oklch(95.00% 0.03044 54.41)"
+        ]
+      },
+      "rose-dark": {
+        "role": "secondary",
+        "displayName": "夜间粉色课程底色",
+        "canonical": "#4b303b",
+        "tonalRamp": [
+          "oklch(15.00% 0.04272 353.47)",
+          "oklch(26.43% 0.04272 353.47)",
+          "oklch(37.86% 0.04272 353.47)",
+          "oklch(49.29% 0.04272 353.47)",
+          "oklch(60.71% 0.04272 353.47)",
+          "oklch(72.14% 0.04272 353.47)",
+          "oklch(83.57% 0.04272 353.47)",
+          "oklch(95.00% 0.04272 353.47)"
+        ]
+      },
+      "pointer-dark": {
+        "role": "secondary",
+        "displayName": "夜间当前时刻粉红",
+        "canonical": "#f28aa2",
+        "tonalRamp": [
+          "oklch(15.00% 0.12855 5.83)",
+          "oklch(26.43% 0.12855 5.83)",
+          "oklch(37.86% 0.12855 5.83)",
+          "oklch(49.29% 0.12855 5.83)",
+          "oklch(60.71% 0.12855 5.83)",
+          "oklch(72.14% 0.12855 5.83)",
+          "oklch(83.57% 0.12855 5.83)",
+          "oklch(95.00% 0.12855 5.83)"
+        ]
+      },
+      "mint-ink-dark": {
+        "role": "neutral",
+        "displayName": "夜间薄荷课程文字",
+        "canonical": "#c2e7ca",
+        "tonalRamp": [
+          "oklch(15.00% 0.05524 151.59)",
+          "oklch(26.43% 0.05524 151.59)",
+          "oklch(37.86% 0.05524 151.59)",
+          "oklch(49.29% 0.05524 151.59)",
+          "oklch(60.71% 0.05524 151.59)",
+          "oklch(72.14% 0.05524 151.59)",
+          "oklch(83.57% 0.05524 151.59)",
+          "oklch(95.00% 0.05524 151.59)"
+        ]
+      },
+      "sky-ink-dark": {
+        "role": "neutral",
+        "displayName": "夜间蓝色课程文字",
+        "canonical": "#c1deed",
+        "tonalRamp": [
+          "oklch(15.00% 0.03708 230.25)",
+          "oklch(26.43% 0.03708 230.25)",
+          "oklch(37.86% 0.03708 230.25)",
+          "oklch(49.29% 0.03708 230.25)",
+          "oklch(60.71% 0.03708 230.25)",
+          "oklch(72.14% 0.03708 230.25)",
+          "oklch(83.57% 0.03708 230.25)",
+          "oklch(95.00% 0.03708 230.25)"
+        ]
+      },
+      "lavender-ink-dark": {
+        "role": "neutral",
+        "displayName": "夜间紫色课程文字",
+        "canonical": "#d9ceef",
+        "tonalRamp": [
+          "oklch(15.00% 0.04649 300.63)",
+          "oklch(26.43% 0.04649 300.63)",
+          "oklch(37.86% 0.04649 300.63)",
+          "oklch(49.29% 0.04649 300.63)",
+          "oklch(60.71% 0.04649 300.63)",
+          "oklch(72.14% 0.04649 300.63)",
+          "oklch(83.57% 0.04649 300.63)",
+          "oklch(95.00% 0.04649 300.63)"
+        ]
+      },
+      "peach-ink-dark": {
+        "role": "neutral",
+        "displayName": "夜间杏色课程文字",
+        "canonical": "#f3dac7",
+        "tonalRamp": [
+          "oklch(15.00% 0.03773 59.53)",
+          "oklch(26.43% 0.03773 59.53)",
+          "oklch(37.86% 0.03773 59.53)",
+          "oklch(49.29% 0.03773 59.53)",
+          "oklch(60.71% 0.03773 59.53)",
+          "oklch(72.14% 0.03773 59.53)",
+          "oklch(83.57% 0.03773 59.53)",
+          "oklch(95.00% 0.03773 59.53)"
+        ]
+      },
+      "rose-ink-dark": {
+        "role": "neutral",
+        "displayName": "夜间粉色课程文字",
+        "canonical": "#efd1dc",
+        "tonalRamp": [
+          "oklch(15.00% 0.03637 353.72)",
+          "oklch(26.43% 0.03637 353.72)",
+          "oklch(37.86% 0.03637 353.72)",
+          "oklch(49.29% 0.03637 353.72)",
+          "oklch(60.71% 0.03637 353.72)",
+          "oklch(72.14% 0.03637 353.72)",
+          "oklch(83.57% 0.03637 353.72)",
+          "oklch(95.00% 0.03637 353.72)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "页面标题",
+        "purpose": "日期和一级页面标题。"
+      },
+      "headline-mobile": {
+        "displayName": "手机页面标题",
+        "purpose": "760px 及以下的页面标题。"
+      },
+      "title": {
+        "displayName": "章节标题",
+        "purpose": "章节与设置区的二级标题。"
+      },
+      "body": {
+        "displayName": "基础界面字",
+        "purpose": "根级默认字体；具体组件自行定义行高。"
+      },
+      "field": {
+        "displayName": "表单输入",
+        "purpose": "课程与设置字段中的输入文字。"
+      },
+      "label": {
+        "displayName": "字段标签",
+        "purpose": "标签、确认说明与普通表单辅助文字。"
+      },
+      "button": {
+        "displayName": "主次按钮",
+        "purpose": "主要和次要动作文字。"
+      },
+      "text-button": {
+        "displayName": "文字动作",
+        "purpose": "轻量的补充入口。"
+      },
+      "course-title": {
+        "displayName": "桌面课程标题",
+        "purpose": "桌面时间块中的课程名称。"
+      },
+      "course-title-mobile": {
+        "displayName": "手机课程标题",
+        "purpose": "横向课表中的课程名称；不以缩小字体塞下整周。"
+      },
+      "wake-time": {
+        "displayName": "起床时刻",
+        "purpose": "明日起床条中的大号时间。"
+      },
+      "lead-number": {
+        "displayName": "提前分钟",
+        "purpose": "可调提前量的大号数值。"
+      },
+      "navigation": {
+        "displayName": "主导航",
+        "purpose": "四个一级入口的默认状态。"
+      },
+      "navigation-active": {
+        "displayName": "已选导航",
+        "purpose": "当前入口的字重状态。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "segment-selected",
+        "value": "0 2px 5px #142e1f0a",
+        "purpose": "已选课表分段，主内容保持平面。"
+      },
+      {
+        "name": "navigation-desktop",
+        "value": "0 6px 28px #17372a14",
+        "purpose": "桌面浮动主导航。"
+      },
+      {
+        "name": "navigation-mobile",
+        "value": "0 -3px 20px #17372a09",
+        "purpose": "手机贴底导航的顶部层次。"
+      },
+      {
+        "name": "course-dialog",
+        "value": "0 15px 65px #19332829",
+        "purpose": "课程编辑模态。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "button-background",
+        "value": "background .18s ease-out",
+        "purpose": "主次按钮悬停底色。"
+      },
+      {
+        "name": "course-hover",
+        "value": "filter .2s",
+        "purpose": "课程块轻微亮度变化。"
+      },
+      {
+        "name": "switch-state",
+        "value": "background .2s; transform .2s",
+        "purpose": "开关轨道和滑块的状态过渡。"
+      },
+      {
+        "name": "toast-state",
+        "value": "opacity .2s,transform .2s",
+        "purpose": "状态提示的淡入与位移。"
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition:none!important; scroll-behavior:auto!important",
+        "purpose": "prefers-reduced-motion:reduce 时的实际覆盖。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-desktop",
+        "value": "1400px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "980px"
+      },
+      {
+        "name": "mobile",
+        "value": "760px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "主要按钮",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "用于导入、保存和提交。保持源码的悬停、焦点、禁用与深色状态。",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 16V3m-5 5 5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4\"/></svg><span>导入课表</span></button>",
+      "css": ".ds-btn-primary{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:0 21px;background:var(--green,#164b42);color:#fff;border:0;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;transition:background .18s ease-out}.ds-btn-primary:hover{background:#246252}.ds-btn-primary:focus-visible{outline:3px solid #508d70;outline-offset:3px;}.ds-btn-primary:disabled{opacity:.5;cursor:not-allowed}.ds-btn-primary svg{flex-shrink:0}@media(prefers-color-scheme:dark){.ds-btn-primary{background:#427e5d}.ds-btn-primary:hover{background:#528f6c}}@media(prefers-reduced-motion:reduce){.ds-btn-primary{transition:none}}"
+    },
+    {
+      "name": "次要按钮",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "用于校对、权限检查与备份等次级动作，保留边界和绿字。",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">校对课程</button>",
+      "css": ".ds-btn-secondary{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:0 21px;background:var(--surface,#fff);color:var(--green,#164b42);border:1px solid #cad9d0;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;transition:background .18s ease-out}.ds-btn-secondary:hover{background:#edf5f0}.ds-btn-secondary:focus-visible{outline:3px solid #508d70;outline-offset:3px;}.ds-btn-secondary:disabled{opacity:.5;cursor:not-allowed}@media(prefers-color-scheme:dark){.ds-btn-secondary{background:var(--surface,#1c2f28);color:var(--green,#92c9aa);border-color:#416350}.ds-btn-secondary:hover{background:#2c493b}}@media(prefers-reduced-motion:reduce){.ds-btn-secondary{transition:none}}"
+    },
+    {
+      "name": "文字按钮",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "轻量补充动作，悬停使用下划线，保持完整触控高度。",
+      "html": "<button class=\"ds-btn-text\" type=\"button\">调整节次表<svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 5 7 7-7 7\"/></svg></button>",
+      "css": ".ds-btn-text{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 6px;background:none;border:0;color:var(--green,#164b42);font-size:13px;font-weight:600;cursor:pointer}.ds-btn-text:hover{text-decoration:underline;text-underline-offset:4px}.ds-btn-text:focus-visible{outline:3px solid #508d70;outline-offset:3px;}.ds-btn-text:disabled{opacity:.5;cursor:not-allowed}@media(prefers-color-scheme:dark){.ds-btn-text{color:var(--green,#92c9aa)}}"
+    },
+    {
+      "name": "课程字段",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "标签与字段分离，真实输入可获得焦点；保留课程校正所需的文字。",
+      "html": "<label class=\"ds-field\">课程名称<input class=\"ds-field-input\" type=\"text\" value=\"概率论与数理统计\" maxlength=\"100\" required></label>",
+      "css": ".ds-field{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:block;color:var(--ink,#203b35);font-size:12px;line-height:1.7}.ds-field-input{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:block;margin-top:7px;width:100%;min-height:44px;padding:11px 12px;background:var(--surface,#fff);color:var(--ink,#203b35);caret-color:var(--green,#164b42);border:1px solid #cdd9d1;border-radius:9px;font-size:13px}.ds-field-input:focus-visible{outline:3px solid #508d70;outline-offset:3px;}@media(prefers-color-scheme:dark){.ds-field{color:var(--ink,#e1eee5)}.ds-field-input{background:var(--surface,#1c2f28);color:var(--ink,#e1eee5);caret-color:var(--green,#92c9aa);border-color:#456451}}"
+    },
+    {
+      "name": "四项主导航",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "共享网页的课表、导入、闹钟、设置入口；此独立预览省略源码的 fixed 定位。",
+      "html": "<nav class=\"ds-bottom-nav\" aria-label=\"主导航\"><button class=\"ds-nav-item ds-nav-active\" type=\"button\" aria-current=\"page\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"3\"/><path d=\"M16 3v4M8 3v4M3 11h18\"/></svg><span>课表</span></button><button class=\"ds-nav-item\" type=\"button\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 16V3m-5 5 5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4\"/></svg><span>导入</span></button><button class=\"ds-nav-item\" type=\"button\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4\"/></svg><span>闹钟</span></button><button class=\"ds-nav-item\" type=\"button\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 3-1 3-3 1 1 3-2 2 2 2-1 3 3 1 1 3h6l1-3 3-1-1-3 2-2-2-2 1-3-3-1-1-3Z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg><span>设置</span></button></nav>",
+      "css": ".ds-bottom-nav{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:flex;gap:16px;align-items:center;justify-content:space-between;width:420px;max-width:100%;height:70px;background:var(--surface,#fff);padding:8px 20px;border-radius:18px;box-shadow:0 6px 28px #17372a14}.ds-nav-item{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;min-width:60px;min-height:50px;padding:0;border:0;background:none;color:var(--muted,#64776f);font-size:11px;cursor:pointer}.ds-nav-active{color:var(--green,#164b42);font-weight:650}.ds-nav-active svg{stroke-width:2.2}.ds-nav-item:focus-visible{outline:3px solid #508d70;outline-offset:3px;}@media(max-width:760px){.ds-bottom-nav{width:100%;height:calc(70px + env(safe-area-inset-bottom));padding:8px 22px calc(8px + env(safe-area-inset-bottom));border-radius:0;box-shadow:0 -3px 20px #17372a09;gap:12px}.ds-nav-item{font-size:10px;min-height:51px;min-width:50px}}@media(prefers-color-scheme:dark){.ds-bottom-nav{background:var(--surface,#1c2f28)}.ds-nav-item{color:var(--muted,#a1b8a9)}.ds-nav-active{color:var(--green,#92c9aa)}}"
+    },
+    {
+      "name": "周与今日分段",
+      "kind": "custom",
+      "description": "两种课表密度的选择；按钮最小高度取源码后置覆盖的 44px。",
+      "html": "<div class=\"ds-segmented\" aria-label=\"课表视图\"><button class=\"ds-segment-active\" type=\"button\">周课表</button><button type=\"button\">今日</button></div>",
+      "css": ".ds-segmented{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:inline-flex;gap:3px;padding:4px;background:#f0f4f1;border-radius:10px}.ds-segmented button{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);min-height:44px;min-width:75px;padding:0 14px;font-size:13px;color:var(--muted,#64776f);background:none;border:0;border-radius:7px;cursor:pointer}.ds-segmented .ds-segment-active{background:var(--surface,#fff);color:var(--green,#164b42);font-weight:650;box-shadow:0 2px 5px #142e1f0a}.ds-segmented button:focus-visible{outline:3px solid #508d70;outline-offset:3px;}@media(max-width:760px){.ds-segmented button{min-width:63px;font-size:12px;padding:0 12px}}@media(prefers-color-scheme:dark){.ds-segmented{background:#15241d}.ds-segmented button{color:var(--muted,#a1b8a9)}.ds-segmented .ds-segment-active{background:#2c493b;color:var(--green,#92c9aa)}}"
+    },
+    {
+      "name": "课程块",
+      "kind": "card",
+      "refersTo": "course-card",
+      "description": "淡色时间块，标题与时刻始终存在；预览尺寸对应 100 分钟课程的局部展示，实际位置由课表计算。",
+      "html": "<div class=\"ds-course-cell\"><button class=\"ds-course-card\" type=\"button\" aria-label=\"编辑 概率论与数理统计，08:30 至 10:10\"><strong>概率论与数理统计</strong><span>理学楼 · A305</span><small>08:30–10:10</small></button></div>",
+      "css": ".ds-course-cell{position:relative;width:180px;height:100px}.ds-course-card{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);position:absolute;left:3px;right:3px;top:0;height:83.333333px;display:flex;flex-direction:column;align-items:flex-start;text-align:left;min-height:44px;padding:10px 7px;background:var(--mint,#deeee2);color:#254c35;border:0;border-radius:8px;overflow:hidden;cursor:pointer;transition:filter .2s}.ds-course-card strong{font-size:12px;font-weight:650;line-height:1.55;overflow-wrap:anywhere}.ds-course-card span{font-size:10px;line-height:1.45;margin-top:6px;opacity:.87;overflow-wrap:anywhere}.ds-course-card small{font-size:9px;font-variant-numeric:tabular-nums;line-height:1.45;margin-top:auto;white-space:normal}.ds-course-card:hover{filter:brightness(.97)}.ds-course-card:focus-visible{outline:3px solid #508d70;outline-offset:3px;}.ds-course-card.ds-course-unconfirmed{outline:1px dashed #786742;outline-offset:-3px}@media(max-width:760px){.ds-course-card{left:2px;right:2px;padding:8px 6px;border-radius:7px}.ds-course-card strong{font-size:13px;line-height:1.6}.ds-course-card span,.ds-course-card small{font-size:11px}.ds-course-card span{margin-top:4px}}@media(prefers-color-scheme:dark){.ds-course-card{background:var(--mint,#264536);color:#c2e7ca}}@media(prefers-reduced-motion:reduce){.ds-course-card{transition:none}}"
+    },
+    {
+      "name": "明日起床条",
+      "kind": "custom",
+      "description": "时间建议与调度事实分开呈现；示例明确说明网页没有设置系统闹钟。",
+      "html": "<div class=\"ds-wake-strip\"><span class=\"ds-wake-symbol\"><svg width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 1v2M12 21v2M1 12h2M21 12h2M4 4l2 2M18 18l2 2M4 20l2-2M18 6l2-2\"/></svg></span><div class=\"ds-wake-copy\"><strong>明早，建议起床时间</strong><span>高等数学 08:30 · 提前 90 分钟</span><small>网页未设置系统闹钟</small></div><button class=\"ds-wake-time\" type=\"button\" aria-label=\"查看明早起床计划\">07:00<svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 5 7 7-7 7\"/></svg></button></div>",
+      "css": ".ds-wake-strip{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:flex;align-items:center;gap:16px;background:#e6f0e8;padding:18px 23px;border-radius:14px;color:#234b35}.ds-wake-symbol{display:grid;place-items:center;width:45px;height:45px;flex-shrink:0}.ds-wake-copy{min-width:0;flex:1}.ds-wake-copy strong{font-size:17px;font-weight:650}.ds-wake-copy span{display:block;font-size:12px;margin-top:6px;color:#486b52;line-height:1.6}.ds-wake-copy small{display:block;font-size:11px;color:#486b52;margin-top:5px}.ds-wake-time{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:flex;align-items:center;gap:18px;min-height:44px;padding:0;border:0;background:none;color:#234b35;font-size:32px;font-weight:650;letter-spacing:-.04em;font-variant-numeric:tabular-nums;white-space:nowrap;cursor:pointer}.ds-wake-time:focus-visible{outline:3px solid #508d70;outline-offset:3px;}@media(max-width:760px){.ds-wake-strip{padding:16px 12px;gap:7px}.ds-wake-symbol{width:33px;height:38px}.ds-wake-symbol svg{width:25px;height:25px}.ds-wake-copy strong{font-size:14px}.ds-wake-copy span{font-size:10px;margin-top:5px}.ds-wake-copy small{font-size:10px}.ds-wake-time{font-size:27px;gap:6px}.ds-wake-time svg{width:15px}}@media(prefers-color-scheme:dark){.ds-wake-strip{background:#233e2d;color:#c6e7cc}.ds-wake-copy span,.ds-wake-copy small,.ds-wake-time{color:#c6e7cc}}"
+    },
+    {
+      "name": "固定轴与当前指针",
+      "kind": "custom",
+      "refersTo": "current-time-tag",
+      "description": "课表局部独立样本：44px 固定轴、粉红当前线、今天三角和圆点，横向滚动仍可读时刻。",
+      "html": "<div class=\"ds-pointer-preview\"><div class=\"ds-pointer-table\"><div class=\"ds-pointer-body\"><div class=\"ds-pointer-hours\"><span class=\"ds-pointer-hour\" style=\"top:0\">07:00</span><span class=\"ds-pointer-hour\" style=\"top:50px\">08:00</span><span class=\"ds-pointer-hour\" style=\"top:100px\">09:00</span><span class=\"ds-pointer-hour\" style=\"top:150px\">10:00</span><span class=\"ds-pointer-tag\" style=\"top:108.333333px\">09:10</span></div><div class=\"ds-pointer-grid\"><div class=\"ds-pointer-day\"></div><div class=\"ds-pointer-day\"></div><div class=\"ds-pointer-day ds-pointer-today\"></div><div class=\"ds-pointer-day\"></div><div class=\"ds-pointer-day\"></div><div class=\"ds-pointer-line\" style=\"top:108.333333px\"><i></i><b></b></div></div></div></div></div>",
+      "css": ".ds-pointer-preview{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);width:340px;max-width:100%;height:180px;overflow:auto;background:var(--surface,#fff);color:var(--muted,#64776f)}.ds-pointer-table{min-width:560px}.ds-pointer-body{position:relative;display:flex;height:750px;margin:8px 0}.ds-pointer-hours{width:44px;flex-shrink:0;position:sticky;left:0;z-index:6;background:var(--surface,#fff)}.ds-pointer-hour{position:absolute;left:0;right:0;font-size:11px;font-variant-numeric:tabular-nums;transform:translateY(-50%)}.ds-pointer-tag{position:absolute;right:3px;z-index:7;transform:translateY(-50%);font-size:11px;line-height:1.6;font-variant-numeric:tabular-nums;padding:0 3px;border-radius:3px;background:var(--pointer,#bf4565);color:#fff}.ds-pointer-grid{position:relative;flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:repeating-linear-gradient(to bottom,transparent 0,transparent 49px,var(--line,#e5ece8) 49px,var(--line,#e5ece8) 50px)}.ds-pointer-day{position:relative;border-right:1px solid var(--line,#e5ece8)}.ds-pointer-day:last-of-type{border-right:0}.ds-pointer-today{background:#edf4ef66}.ds-pointer-line{position:absolute;left:0;right:0;z-index:4;height:1px;background:var(--pointer,#bf4565);pointer-events:none}.ds-pointer-line i{position:absolute;left:40%;top:-4px;width:8px;height:8px;background:var(--pointer,#bf4565);clip-path:polygon(0 0,100% 50%,0 100%)}.ds-pointer-line b{position:absolute;left:50%;top:-3px;width:7px;height:7px;border-radius:50%;background:var(--pointer,#bf4565);outline:3px solid #fff9}@media(prefers-color-scheme:dark){.ds-pointer-preview{background:var(--surface,#1c2f28);color:var(--muted,#a1b8a9)}.ds-pointer-hours{background:var(--surface,#1c2f28)}.ds-pointer-tag,.ds-pointer-line,.ds-pointer-line i,.ds-pointer-line b{background:var(--pointer,#f28aa2)}.ds-pointer-grid{background:repeating-linear-gradient(to bottom,transparent 0,transparent 49px,var(--line,#30483d) 49px,var(--line,#30483d) 50px)}.ds-pointer-day{border-color:var(--line,#30483d)}.ds-pointer-today{background:#34544244}.ds-pointer-line b{outline-color:#14221e}}"
+    },
+    {
+      "name": "文件导入区域",
+      "kind": "custom",
+      "refersTo": "import-dropzone",
+      "description": "真实 file 输入覆盖虚线区域，键盘焦点可见，文件类型提示不依赖图标。",
+      "html": "<label class=\"ds-dropzone\"><svg width=\"35\" height=\"35\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 16V3m-5 5 5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4\"/></svg><strong>选择 PDF 或课表图片</strong><span>支持文字 PDF、扫描 PDF、PNG / JPG · 最大 30 MB</span><span class=\"ds-dropzone-button\">选择文件</span><input class=\"ds-dropzone-input\" type=\"file\" accept=\"application/pdf,image/png,image/jpeg,image/webp\" aria-label=\"选择 PDF 或课表图片\"></label>",
+      "css": ".ds-dropzone{font-family:var(--font,-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif);display:flex;align-items:center;flex-direction:column;gap:16px;padding:45px 18px;background:var(--surface,#fff);color:var(--ink,#203b35);border:1px dashed #b6cdc0;border-radius:14px;cursor:pointer;text-align:center;position:relative}.ds-dropzone>svg{color:var(--green,#164b42);margin-bottom:6px}.ds-dropzone strong{font-size:19px;font-weight:650}.ds-dropzone>span:not(.ds-dropzone-button){font-size:12px;color:var(--muted,#64776f);line-height:1.7}.ds-dropzone-button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 21px;background:var(--green,#164b42);color:#fff;border-radius:11px;font-size:14px;font-weight:600}.ds-dropzone-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.ds-dropzone:focus-within{outline:3px solid #508d70;outline-offset:3px;}.ds-dropzone-input:disabled{pointer-events:none}@media(max-width:760px){.ds-dropzone{padding:35px 16px;gap:14px}.ds-dropzone strong{font-size:17px}.ds-dropzone>span:not(.ds-dropzone-button){font-size:11px}}@media(prefers-color-scheme:dark){.ds-dropzone{background:var(--surface,#1c2f28);color:var(--ink,#e1eee5);border-color:#5b806b}.ds-dropzone>svg{color:var(--green,#92c9aa)}.ds-dropzone>span:not(.ds-dropzone-button){color:var(--muted,#a1b8a9)}.ds-dropzone-button{background:#427e5d}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "公共交通时间图",
+    "overview": "以校园里熟悉的公共交通时间图为视觉来源：横向排星期，纵向排真实时刻，课程块按上课时长占位。冷白画布、深松绿交互和淡色课程分组，让密集信息保持安静；粉红指针把“现在”落到同一坐标中。\n\n界面以中文阅读和个人校正为中心。手机保留横向课表与固定时间轴，桌面增加今日安排；按钮、输入框、短说明和原文对照形成直接的操作关系。圆角用于界定可操作表面，细网格负责时间参照。\n\n本文件只记录已实现的共享网页界面，依据 src/main.mjs、public/style.css、index.html 和 .impeccable/review 中的明暗截图。鸿蒙与 iOS 原生源的编译、安装、权限及响铃没有在本轮验证；界面中的系统成功状态必须来自原生回执，不能由视觉预览推定。",
+    "keyCharacteristics": [
+      "二维时间坐标，课程位置和高度来自实际起止时间。",
+      "手机横向查看整周，固定时间轴与当前时间标签。",
+      "低饱和课程分组、深绿操作、粉红当前时刻。",
+      "中文系统字体、等宽数字、明暗主题和减少动效支持。",
+      "识别结果可校正，预览与系统调度状态有明确文字边界。"
+    ],
+    "rules": [
+      {
+        "name": "The Time Pointer Rule",
+        "body": "饱和粉红用于当前时间线、时间标签、今天的三角和圆点；课程仍用淡色底和文字识别，主要操作保持绿色。",
+        "section": "colors"
+      },
+      {
+        "name": "The Honest Status Rule",
+        "body": "柔和状态底色不能代替事实。网页起床预览、待确认课程、系统调度失败和原生返回的成功状态必须分别用文字表达；演示数据始终说明不会设置闹钟。",
+        "section": "colors"
+      },
+      {
+        "name": "The Stable Numeral Rule",
+        "body": "时钟、时间轴、起床时刻和提前分钟沿用界面字体，并保留 tabular-nums；不要用数字宽度变化制造视觉跳动。",
+        "section": "typography"
+      },
+      {
+        "name": "The Grid Stays Flat Rule",
+        "body": "课表表面和课程块保持平面，以网格、淡色分组和当前时刻表达关系；阴影只承担已实现的分段选择、浮动导航与模态层级。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** 保留星期 × 时间的二维关系，并按课程起止时间计算位置与高度。",
+      "**Do** 在手机上保留横向滚动、固定时间轴、当前时间标签和滑动说明；五日与七日分别使用已实现的最小宽度。",
+      "**Do** 让用户点击课程进入校对，保留名称、地点、星期、周次、起止时间、日期与确认状态。",
+      "**Do** 用明确文字区分演示、网页预览、普通通知、系统代理提醒、系统闹钟与调度错误。",
+      "**Do** 使用本机中文字体、等宽数字、可见键盘焦点，并响应深色主题和减少动效偏好。",
+      "**Do** 在导入校对与危险操作中保留原文、警告和单独的操作入口。"
+    ],
+    "donts": [
+      "**Don't** 为塞下整周而缩窄手机课程列，或移除固定的时间参照。",
+      "**Don't** 把演示、网页预览、日历导出或普通通知标成系统闹钟已设置。",
+      "**Don't** 用课程颜色代替名称、时间、待确认文字或系统状态说明。",
+      "**Don't** 把课表替换成装饰性统计卡片，让用户失去真实的星期和时刻位置。",
+      "**Don't** 为界面字体增加联网依赖，或把现有过小的辅助文字固化成新增页面的默认字号。"
+    ]
+  }
+}

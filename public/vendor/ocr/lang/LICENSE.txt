@@ -1,0 +1,1 @@
+tessdata_fast language models: Apache-2.0. Source: https://github.com/tesseract-ocr/tessdata_fast

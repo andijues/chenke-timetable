@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {courseFromText,parseTimetable,parsePositionedPage} from '../src/parser.mjs';
+import {createState} from '../src/core.mjs';
+const settings=createState('2026-09-07').settings;
+test('直接时间、星期和单双周来自原文，识别后不自动确认',()=>{const c=courseFromText('高等数学\n周一\n08:30-10:10\n1-16周(单)\n理学楼A302',{},settings);assert.equal(c.name,'高等数学');assert.equal(c.day,1);assert.equal(c.start,'08:30');assert.equal(c.location,'理学楼A302');assert.deepEqual(c.weeks,[1,3,5,7,9,11,13,15]);assert.equal(c.confirmed,false);});
+test('节次可修改，推算必须显示校对原因',()=>{const cfg=structuredClone(settings);cfg.periods[0].start='09:00';const c=courseFromText('英语\n1-2节\n1-8周',{day:2},cfg);assert.equal(c.start,'09:00');assert.match(c.reasons.join(','),/节次推算/);});
+test('没有时间仍保留为待校正，而不是丢弃课程',()=>{const c=courseFromText('机器学习\n信息楼502',{day:3},settings);assert.match(c.reasons.join(','),/未找到上课时间/);assert.equal(c.confirmed,false);});
+test('文字表格按星期列与时间行分组',()=>{const item=(text,x,y,width=65)=>({text,x,y,width,height:12});const page={width:600,height:800,items:[item('周一',100,20),item('周二',210,20),item('周三',320,20),item('周四',430,20),item('周五',540,20),item('1-2节',4,70,50),item('高等数学',85,70),item('1-16周',85,87),item('理学楼A302',85,104),item('英语',202,70),item('08:30-10:10',196,87,90),item('1-18周',202,104)]};const r=parsePositionedPage(page,settings);assert.equal(r.method,'grid');assert.equal(r.courses.length,2);assert.equal(r.courses[0].day,1);assert.equal(r.courses[1].day,2);});
+test('空识别展示恢复方案',()=>{const r=parseTimetable({pages:[],text:''},settings);assert.equal(r.courses.length,0);assert.equal(r.warnings.length,1);});
