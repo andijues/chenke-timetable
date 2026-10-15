@@ -40,6 +40,7 @@ with zipfile.ZipFile(BytesIO(data)) as ipa:
     header = struct.unpack('<IiiIIIII', binary[:32])
     assert header[0] == 0xFEEDFACF and header[1] == 0x0100000C
     assert info['MinimumOSVersion'] == '26.0'
+    assert info['CFBundleShortVersionString'] == '0.2.0' and info['CFBundleVersion'] == '3'
     assert info['CFBundleIdentifier'] == 'com.personal.chenke'
     assert info['NSAlarmKitUsageDescription']
     assert b'AlarmKit.framework/AlarmKit' in binary

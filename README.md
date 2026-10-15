@@ -44,7 +44,7 @@ npm.cmd test
 npm.cmd run test:ui
 ```
 
-依赖采用 package-lock.json 固定版本。`assets` 仅构建时从开源项目下载中文/英文 OCR 模型，应用运行不调用识别服务。`build` 把 dist 复制到两个原生项目内。UI 测试当前使用 Windows Edge，包含真实样本文件上传与 OCR。
+依赖采用 package-lock.json 固定版本。`assets` 仅构建时从开源项目下载中文/英文 OCR 模型，应用运行不调用识别服务。`build` 把 dist 复制到三个原生项目内。UI 测试当前使用 Windows Edge，包含真实样本文件上传与 OCR。
 
 ## Android 安装与构建
 
@@ -102,4 +102,4 @@ GitHub 标准公共 runner 的免费计算条件见 [官方计费文档](https:/
 
 ## 项目文件
 
-`src/` 为规则、解析、界面和原生桥接；`native/harmony/` 和 `native/ios/` 为原生工程；`dist/` 为已构建预览；`tests/fixtures/` 为带演示标记的文字/扫描 PDF 与图片。`reports/` 为检查记录，`.impeccable/review/` 为网页截图。
+`src/` 为规则、解析、界面和原生桥接；`native/harmony/`、`native/ios/` 和 `native/android/` 为原生工程；`dist/` 为已构建预览；`tests/fixtures/` 为带演示标记的文字/扫描 PDF 与图片。`reports/` 为检查记录，`.impeccable/review/` 为网页截图。

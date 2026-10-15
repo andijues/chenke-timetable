@@ -4,6 +4,8 @@ import json
 import subprocess
 import zipfile
 import gzip
+import argparse
+import os
 
 root = Path(__file__).resolve().parent.parent
 record = json.loads((root/'reports/android-build.json').read_text(encoding='utf-8'))
@@ -28,7 +30,12 @@ with zipfile.ZipFile(package) as apk:
     count = sum(n.startswith('assets/web/') and not n.endswith('/') for n in names)
 sdk = Path(record['sdk'])
 tools = sdk/'build-tools/35.0.0'
-java = Path('D:/ChenkeHarmonyBuild/tools/jdk17/jdk-17.0.20.1+1')
+args = argparse.ArgumentParser()
+args.add_argument('--java')
+options = args.parse_args()
+java_path = options.java or record.get('javaHome') or os.environ.get('JAVA_HOME')
+assert java_path, 'Supply --java or JAVA_HOME matching the build JDK'
+java = Path(java_path)
 # Invoke the official Java signer directly so shell paths cannot change arguments.
 verify = subprocess.run([str(java/'bin/java.exe'),'-jar',str(tools/'lib/apksigner.jar'),'verify','--verbose','--print-certs',str(package)],
     check=True,capture_output=True,text=True,encoding='utf-8',errors='replace')
@@ -41,7 +48,7 @@ for permission in ['SCHEDULE_EXACT_ALARM','POST_NOTIFICATIONS','RECEIVE_BOOT_COM
     assert permission in manifest, permission
 record.update({'zipIntegrity':'passed','officialSignatureVerification':'passed','signatureSchemeV2':True,
     'manifestVerified':True,'compiledDex':True,'offlineWebFiles':count,'sharedUIHashMatches':True,
-    'deviceInstalled':False,'lockScreenAlarmTested':False})
+    'javaHome':str(java),'deviceInstalled':False,'lockScreenAlarmTested':False})
 (root/'reports/android-build.json').write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
 (root/'reports/android-apksigner.txt').write_text(verify.stdout,encoding='utf-8')
 print(json.dumps(record,ensure_ascii=False,indent=2))

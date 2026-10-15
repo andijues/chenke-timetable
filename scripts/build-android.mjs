@@ -54,6 +54,6 @@ try {
  await run(gradle,['--no-daemon','--console=plain',':app:assembleDebug',':app:lintDebug']);
  const apk=await readFile(path.join(stage,'app/build/outputs/apk/debug/app-debug.apk'));
  const dest=path.join(root,'output/晨课-Android-调试.apk');await mkdir(path.dirname(dest),{recursive:true});await writeFile(dest,apk);
- const report={build:'success',compiledAt:new Date().toISOString(),version:'0.2.0',minSdk:26,targetSdk:36,compileSdk:36,gradle:'8.13',agp:'8.13.2',java:'17',artifact:path.relative(root,dest).replaceAll('\\','/'),bytes:apk.length,sha256:createHash('sha256').update(apk).digest('hex'),stage,sdk,debugSigned:true,lint:'passed',jvmRuleTests:7,deviceInstalled:false,lockScreenAlarmTested:false};
+ const report={build:'success',compiledAt:new Date().toISOString(),version:'0.2.0',minSdk:26,targetSdk:36,compileSdk:36,gradle:'8.13',agp:'8.13.2',java:'17',javaHome:java,artifact:path.relative(root,dest).replaceAll('\\','/'),bytes:apk.length,sha256:createHash('sha256').update(apk).digest('hex'),stage,sdk,debugSigned:true,lint:'passed',jvmRuleTests:7,deviceInstalled:false,lockScreenAlarmTested:false};
  await writeFile(path.join(root,'reports/android-build.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
 }finally{await writeFile(path.join(root,'reports/android-build.log'),log);}
