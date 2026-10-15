@@ -3,6 +3,7 @@ import {parseTimetable} from './parser.mjs';
 import {importDocument} from './importer.mjs';
 import {platform,callNative,capabilities,dispatchAlarms,shortcutURL} from './bridge.mjs';
 import {inferWeekRule,weekSummary,weeksEditor,coursePeriodControls,resizePeriods,periodChart,periodSliders,periodsEditor} from './schedule-ui.mjs';
+import {harmonyAuthorization} from './harmony-ui.mjs';
 
 const KEY='chenke.state.v1'; const $=s=>document.querySelector(s);
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -13,6 +14,7 @@ try {const raw=localStorage.getItem(KEY);if(raw)state=validateState(JSON.parse(r
 let route='home', view='week', selected=dateParts().date, showAllDays=false;
 let importResult=null, importBusy=false, progress='', nativeStatus={mode:'pending',scheduled:0,message:'尚未启用系统闹钟'}, nativeCaps=null;
 let syncFingerprint='', syncRunning=false, syncAgain=false, clockRequestBusy=false;
+let nativeTestFeedback=null, nativeTestBusy=false, nativeResumeTimer=null, editorInitial='';
 let periodDraft=null, periodScope='common', periodActive=0;
 const root=$('#app');
 function updateMobileViewport(){
@@ -33,13 +35,21 @@ document.addEventListener('focusin',updateMobileViewport);
 document.addEventListener('focusout',()=>requestAnimationFrame(updateMobileViewport));
 updateMobileViewport();
 function toast(text) {$('#toast').textContent=text;$('#toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').classList.remove('visible'),4500);}
+function updateNativeNavigation(){if(platform()==='harmony')callNative('setBackState',{handled:route!=='home'||$('#course-dialog').open}).catch(()=>{});}
+function updateNativeCaps(c){if(platform()==='harmony'&&c&&'reminderGranted'in c)nativeCaps={...nativeCaps,...c};}
+async function harmonyTest(action='testAlarm'){
+  if(nativeTestBusy)return;nativeTestBusy=true;render();
+  try{const result=await callNative(action);updateNativeCaps(result);nativeTestFeedback={...result,failed:result.failed||result.mode==='blocked'};if(result.failed)nativeStatus=result;}
+  catch(e){nativeTestFeedback={failed:true,message:e.message};}
+  finally{nativeTestBusy=false;render();$('.harmony-feedback')?.scrollIntoView({block:'nearest'});}
+}
 function save() {state.modifiedAt=new Date().toISOString();try{localStorage.setItem(KEY,JSON.stringify(state));}catch{toast('保存空间不足，请导出备份后清理文件。');}if(platform()!=='web')callNative('saveState',{state}).catch(e=>toast(`设备保存失败：${e.message}`));render();sync();}
 async function sync(force=false) {
   const plans=planAlarms(state);const fingerprint=JSON.stringify([androidClockMode(),plans.map(p=>[p.id,p.fireAt,p.course])]);
   if(!force&&fingerprint===syncFingerprint)return;
   if(syncRunning){syncAgain=true;return;}
   syncRunning=true;nativeStatus={mode:'pending',scheduled:0,message:'正在更新起床计划…'};if(route==='home'||route==='alarms')render();
-  try {nativeStatus=await dispatchAlarms(plans,androidClockMode()?'clock':'app');if(!nativeStatus.failed)syncFingerprint=fingerprint;}catch(e){nativeStatus={mode:'error',scheduled:0,message:e.message};}finally{syncRunning=false;if(route==='alarms'||route==='home')render();if(syncAgain){syncAgain=false;sync();}}
+  try {nativeStatus=await dispatchAlarms(plans,androidClockMode()?'clock':'app');updateNativeCaps(nativeStatus);if(!nativeStatus.failed)syncFingerprint=fingerprint;}catch(e){nativeStatus={mode:'error',scheduled:0,message:e.message};}finally{syncRunning=false;if(route==='alarms'||route==='home')render();if(syncAgain){syncAgain=false;sync();}}
 }
 function dateLabel(date,short=false){const d=new Date(`${date}T12:00:00Z`);return `${d.getUTCMonth()+1}${short?'/':'月'}${d.getUTCDate()}${short?'':'日'}`;}
 function weekLabel(){const w=weekNumber(selected,state.settings.week1);return w<1?'学期开始前':w>state.settings.totalWeeks?'学期已结束':`第 ${w} 周`;}
@@ -47,7 +57,7 @@ function header() {return `<header class="topbar"><a class="brand" href="#home" 
 function nav(){return `<nav class="bottom-nav" aria-label="主导航">${[['home','calendar','课表'],['import','upload','导入'],['alarms','bell','闹钟'],['settings','settings','设置']].map(([id,i,t])=>`<button data-route="${id}" class="nav-item ${route===id?'active':''}" ${route===id?'aria-current="page"':''}>${icon(i)}<span>${t}</span></button>`).join('')}</nav>`;}
 function demoBanner(){return state.demo?`<div class="demo-strip">${icon('book')}<span>演示课表 · 不会设置闹钟</span><button class="text-button" data-action="new">开始自己的课表${icon('arrow')}</button></div>`:'';}
 function emptyHome(){return `<section class="empty-home"><div class="empty-graphic">${icon('calendar')}</div><h1>把课表放进生活里。</h1><p>导入 PDF 或图片，也可以直接手动排课。<br>先设好学期与节次，时间和周次都由你调整。</p><button class="button" data-action="import">${icon('upload')}导入我的课表</button><button class="button secondary" data-action="add">${icon('plus')}手动添加课程</button><button class="text-button" data-route="settings">设置学期与节次${icon('arrow')}</button><button class="text-button" data-action="demo">先体验演示课表${icon('arrow')}</button><div class="empty-notes"><span>${icon('check')}文件在本机识别</span><span>${icon('check')}课程随时可修改</span></div></section>`;}
-function wakeStrip(){const tomorrow=addDays(dateParts().date,1);const plan=morningPlan(state,tomorrow);const arranged=state.settings.enabled&&!state.demo&&['alarm','system-reminder'].includes(nativeStatus.mode)&&nativeStatus.scheduled>0;const status=state.demo?'演示预览':!state.settings.enabled?(androidClockMode()?'起床计划未启用':'闹钟未启用'):androidClockMode()?(nativeStatus.mode==='error'?'时钟交接未完成':plan.status==='review'?'晨课还需确认':plan.status==='rest'?'上午无课，无需交接':nativeStatus.lastClockRequest&&!nativeStatus.lastClockRequest.test&&Date.parse(nativeStatus.lastClockRequest.fireAt)===Date.parse(plan.alarmAt)?'请在时钟确认已保存':'待交给手机时钟'):platform()==='web'?'网页未设置系统闹钟':nativeStatus.mode==='error'?'系统调度失败':arranged?'系统已安排':'等待系统调度';return `<div class="wake-strip"><span class="wake-symbol">${icon(plan.status==='rest'?'moon':'sun')}</span><div class="wake-copy"><strong>${plan.status==='ready'?'明早，建议起床时间':plan.status==='review'?'明早的课程还需确认':'明早，留给自己'}</strong><span>${plan.status==='ready'?`${escape(plan.firstCourse.name)} ${plan.firstCourse.start} · 提前 ${state.settings.leadMinutes} 分钟`:plan.status==='review'?'校对并确认晨课后，才会生成闹钟':'上午无课，不安排起床闹钟'}</span><small class="wake-status">${status}</small></div><button class="wake-time" data-route="alarms" aria-label="查看明早起床计划">${plan.alarmTime??'休息'}${icon('arrow')}</button></div>`;}
+function wakeStrip(){const tomorrow=addDays(dateParts().date,1);const plan=morningPlan(state,tomorrow);const arranged=state.settings.enabled&&!state.demo&&['alarm','system-reminder'].includes(nativeStatus.mode)&&nativeStatus.scheduled>0;const status=state.demo?'演示预览':!state.settings.enabled?(androidClockMode()?'起床计划未启用':'闹钟未启用'):androidClockMode()?(nativeStatus.mode==='error'?'时钟交接未完成':plan.status==='review'?'晨课还需确认':plan.status==='rest'?'上午无课，无需交接':nativeStatus.lastClockRequest&&!nativeStatus.lastClockRequest.test&&Date.parse(nativeStatus.lastClockRequest.fireAt)===Date.parse(plan.alarmAt)?'请在时钟确认已保存':'待交给手机时钟'):platform()==='web'?'网页未设置系统闹钟':nativeStatus.mode==='blocked'?'等待系统提醒授权':nativeStatus.mode==='error'?'系统调度失败':arranged?'系统已安排':'等待系统调度';return `<div class="wake-strip"><span class="wake-symbol">${icon(plan.status==='rest'?'moon':'sun')}</span><div class="wake-copy"><strong>${plan.status==='ready'?'明早，建议起床时间':plan.status==='review'?'明早的课程还需确认':'明早，留给自己'}</strong><span>${plan.status==='ready'?`${escape(plan.firstCourse.name)} ${plan.firstCourse.start} · 提前 ${state.settings.leadMinutes} 分钟`:plan.status==='review'?'校对并确认晨课后，才会生成闹钟':'上午无课，不安排起床闹钟'}</span><small class="wake-status">${status}</small></div><button class="wake-time" data-route="alarms" aria-label="查看明早起床计划">${plan.alarmTime??'休息'}${icon('arrow')}</button></div>`;}
 function home(){
   if(!state.courses.length)return emptyHome();
   return `${demoBanner()}<div class="page-heading"><div><h1>${dateLabel(selected)}<span>${weekdays[dayOfWeek(selected)-1]}</span></h1><p>${weekLabel()}<span class="dot-separator">·</span>${selected===dateParts().date?'今天':selected} <span class="now-clock">现在 ${dateParts().time}</span></p></div><button class="button secondary compact" data-action="add">${icon('plus')}添加课程</button></div>${wakeStrip()}<div class="workspace"><section class="schedule-panel"><div class="schedule-toolbar"><div class="segmented" aria-label="课表视图"><button data-view="week" class="${view==='week'?'active':''}">周课表</button><button data-view="day" class="${view==='day'?'active':''}">今日</button></div><div class="week-navigation"><button class="icon-button previous" data-action="previous" aria-label="前一周">${icon('arrow')}</button><button class="text-button" data-action="today">今天</button><button class="icon-button" data-action="next" aria-label="后一周">${icon('arrow')}</button></div></div><div class="week-jump"><label>查看周次<select id="view-week" aria-label="查看学期周次"><option value="0" ${weekNumber(selected,state.settings.week1)<1||weekNumber(selected,state.settings.week1)>state.settings.totalWeeks?'selected':''}>按当前日期</option>${Array.from({length:state.settings.totalWeeks},(_,i)=>`<option value="${i+1}" ${weekNumber(selected,state.settings.week1)===i+1?'selected':''}>第 ${i+1} 周${(i+1)%2?' · 单周':' · 双周'}</option>`).join('')}</select></label><span>${dateLabel(mondayOf(selected),true)}–${dateLabel(addDays(mondayOf(selected),6),true)}</span></div>${view==='week'?weekGrid():dayList(selected)}${view==='week'?`<div class="schedule-foot"><span><i class="now-dot"></i>指针为中国标准时间的当前时刻</span><button class="text-button" data-action="all-days">${showAllDays?'显示五天':'显示周末'}</button></div>`:''}</section><aside class="day-aside"><div class="aside-heading"><h2>今天的安排</h2><span>${coursesOn(state,dateParts().date).length} 门课</span></div>${dayList(dateParts().date,true)}<div class="aside-note">${icon('moon')}<p>好的早晨，<br>从心里有数开始。</p></div></aside></div>`;
@@ -95,12 +105,12 @@ async function openSystemClock(action){
 }
 function alarmExplanation(){
   if(platform()==='ios')return '系统闹钟权限开启后，由 iOS 负责锁屏和退出应用后的响铃。请不要将晨课设为隐藏或需要密码解锁的应用，以免闹钟失效。';
-  if(platform()==='harmony')return '由鸿蒙系统代理负责响铃，使用闹钟音量，可关闭应用。请先允许通知，再做一次锁屏响铃测试。';
+  if(platform()==='harmony')return '获得系统代理提醒授权后，可由鸿蒙系统负责响铃。先检查权限，再测试退出应用和锁屏后的提醒；未通过测试前，请保留手机时钟闹钟。';
   if(androidClockMode())return '保存后由接收的时钟应用负责响铃。请确认打开的是手机自带时钟，并测试清理后台后的响铃；卓易通是否支持转接需以本机结果为准。';
   if(platform()==='android')return '由 Android 系统准确闹钟触发原生响铃。请允许通知、“闹钟和提醒”及锁屏全屏显示，并检查闹钟音量；如手机限制后台运行，请在系统设置中允许晨课自启动，再退出应用做锁屏测试。';
   return '网页只显示起床计划。安装手机原生版后，才能由系统在锁屏和退出应用后负责响铃。';
 }
-function alarmsView(){const today=dateParts().date;const plans=planAlarms({...state,demo:false,settings:{...state.settings,enabled:true}});const next=Array.from({length:7},(_,i)=>morningPlan(state,addDays(today,i)));return `<div class="page-heading"><div><h1>起床，刚刚好。</h1><p>只为上午的第一节课留好时间。</p></div>${icon('sun','heading-icon')}</div><div class="alarm-layout"><section class="alarm-main">${clockModeChooser()}${androidClockMode()?systemClockPanel():''}<div class="alarm-rule"><div class="rule-top"><h2>${androidClockMode()?'按课表计算起床计划':'自动安排起床闹钟'}</h2><label class="switch"><input type="checkbox" id="alarm-enabled" ${state.settings.enabled?'checked':''} ${state.demo?'disabled':''} aria-label="${androidClockMode()?'按课表计算起床计划':'自动安排起床闹钟'}"><span></span></label></div><p>${state.demo?'演示课表不发布闹钟，先导入你的真实课表。':androidClockMode()?'启用后计算未来 28 天的计划，交给时钟需逐次确认。':'启用后，根据已确认课程更新未来 28 天的起床计划。'}</p><div class="lead-display"><span>提前</span><strong id="lead-value">${state.settings.leadMinutes}</strong><span>分钟起床</span></div><input id="lead-slider" type="range" min="0" max="240" step="5" value="${Math.min(240,state.settings.leadMinutes)}" aria-label="提前起床分钟"><div class="range-labels"><span>跟随首课</span><span>提前 4 小时</span></div><label class="inline-field">精确提前量<input id="lead-input" type="number" inputmode="numeric" aria-label="精确提前起床分钟" min="0" max="1440" value="${state.settings.leadMinutes}"><span>分钟</span></label><div class="rule-example">${icon('clock')}<span>例如 08:30 上课 → ${clock((510-state.settings.leadMinutes+1440)%1440)} 起床${state.settings.leadMinutes>510?'（前一天）':''}</span></div></div><div class="native-status ${nativeStatus.mode==='error'?'error':''}">${icon(nativeStatus.mode==='alarm'||nativeStatus.mode==='system-reminder'?'check':'bell')}<div><strong>${nativeStatus.mode==='clock-request'?'请在时钟中确认保存':nativeStatus.mode==='clock-preview'?'待交给系统时钟':nativeStatus.mode==='alarm'?'系统闹钟已调度':nativeStatus.mode==='system-reminder'?'系统代理提醒已调度':nativeStatus.mode==='preview'?'当前为网页起床预览':nativeStatus.mode==='notification'?'已安排普通通知提醒':nativeStatus.mode==='error'?'闹钟尚未设置':'系统调度状态'}</strong><p>${escape(nativeStatus.message)}</p>${nativeStatus.scheduled?`<small>已安排 ${nativeStatus.scheduled} 个 · 发布窗口 28 天</small>`:''}</div></div><div class="alarm-actions"><button class="button secondary" data-action="sync">${androidClockMode()?'刷新起床计划':'检查权限并更新'}</button>${androidClockMode()?'':'<button class="text-button" data-action="test-alarm">测试 1 分钟后响铃</button>'}</div><p class="helper">${escape(alarmExplanation())}</p>${platform()==='web'?`<details class="shortcut-help"><summary>iOS 零花费长期使用：快捷指令方案</summary><p>网页不能直接设系统闹钟。安装“晨课闹钟”快捷指令后，可把下一次起床时间传给“时钟”创建闹钟；每天自动判断需另配置个人自动化。详见安装说明。</p><a class="button secondary" href="${escape(shortcutURL(plans.slice(0,1)))}">交给快捷指令</a><button class="text-button" data-action="export-alarms">导出起床计划 JSON</button></details>`:''}</section><section class="alarm-week"><div class="section-heading"><h2>接下来的一周</h2><span>按具体日期计算</span></div>${next.map(p=>`<div class="alarm-day"><div><strong>${p.date===today?'今天':weekdays[dayOfWeek(p.date)-1]}</strong><small>${dateLabel(p.date,true)}</small></div><div class="alarm-day-course"><strong>${p.firstCourse?escape(p.firstCourse.name):'上午无课'}</strong><small>${p.status==='ready'?`${p.firstCourse.start} 上课 · 提前 ${state.settings.leadMinutes} 分钟`:p.reason}</small></div><span class="alarm-day-time ${p.status==='rest'?'rest':''}">${p.alarmTime??(p.status==='review'?'待确认':'休息')}</span></div>`).join('')}<p class="helper">未确认晨课、停课日和上午无课日不会发布闹钟。课程修改后会重新计算；请定期打开应用刷新未来日期。</p></section></div>`;}
+function alarmsView(){const today=dateParts().date;const plans=planAlarms({...state,demo:false,settings:{...state.settings,enabled:true}});const next=Array.from({length:7},(_,i)=>morningPlan(state,addDays(today,i)));return `<div class="page-heading"><div><h1>起床，刚刚好。</h1><p>只为上午的第一节课留好时间。</p></div>${icon('sun','heading-icon')}</div><div class="alarm-layout"><section class="alarm-main">${clockModeChooser()}${androidClockMode()?systemClockPanel():''}${platform()==='harmony'?harmonyAuthorization(nativeCaps,nativeTestFeedback,nativeTestBusy):''}<div class="alarm-rule"><div class="rule-top"><h2>${androidClockMode()?'按课表计算起床计划':'自动安排起床闹钟'}</h2><label class="switch"><input type="checkbox" id="alarm-enabled" ${state.settings.enabled?'checked':''} ${state.demo?'disabled':''} aria-label="${androidClockMode()?'按课表计算起床计划':'自动安排起床闹钟'}"><span></span></label></div><p>${state.demo?'演示课表不发布闹钟，先导入你的真实课表。':androidClockMode()?'启用后计算未来 28 天的计划，交给时钟需逐次确认。':'启用后，根据已确认课程更新未来 28 天的起床计划。'}</p><div class="lead-display"><span>提前</span><strong id="lead-value">${state.settings.leadMinutes}</strong><span>分钟起床</span></div><input id="lead-slider" type="range" min="0" max="240" step="5" value="${Math.min(240,state.settings.leadMinutes)}" aria-label="提前起床分钟"><div class="range-labels"><span>跟随首课</span><span>提前 4 小时</span></div><label class="inline-field">精确提前量<input id="lead-input" type="number" inputmode="numeric" aria-label="精确提前起床分钟" min="0" max="1440" value="${state.settings.leadMinutes}"><span>分钟</span></label><div class="rule-example">${icon('clock')}<span>例如 08:30 上课 → ${clock((510-state.settings.leadMinutes+1440)%1440)} 起床${state.settings.leadMinutes>510?'（前一天）':''}</span></div></div><div class="native-status ${nativeStatus.mode==='error'?'error':''}" role="status" aria-live="polite">${icon(nativeStatus.mode==='alarm'||nativeStatus.mode==='system-reminder'?'check':'bell')}<div><strong>${nativeStatus.mode==='clock-request'?'请在时钟中确认保存':nativeStatus.mode==='clock-preview'?'待交给系统时钟':nativeStatus.mode==='alarm'?'系统闹钟已调度':nativeStatus.mode==='system-reminder'?'系统代理提醒已调度':nativeStatus.mode==='preview'?'当前为网页起床预览':nativeStatus.mode==='notification'?'已安排普通通知提醒':nativeStatus.mode==='error'?'闹钟尚未设置':nativeStatus.mode==='blocked'?'等待系统提醒授权':'系统调度状态'}</strong><p>${escape(nativeStatus.message)}</p>${nativeStatus.scheduled?`<small>已安排 ${nativeStatus.scheduled} 个 · 发布窗口 28 天</small>`:''}</div></div><div class="alarm-actions"><button class="button secondary" data-action="sync">${androidClockMode()?'刷新起床计划':'检查权限并更新'}</button>${androidClockMode()?'':`<button class="text-button" data-action="test-alarm" ${nativeTestBusy||platform()==='harmony'&&nativeCaps?.reminderGranted===false?'disabled':''}>${nativeTestBusy?'正在提交测试…':'测试 1 分钟后响铃'}</button>`}</div><p class="helper">${escape(alarmExplanation())}</p>${platform()==='web'?`<details class="shortcut-help"><summary>iOS 零花费长期使用：快捷指令方案</summary><p>网页不能直接设系统闹钟。安装“晨课闹钟”快捷指令后，可把下一次起床时间传给“时钟”创建闹钟；每天自动判断需另配置个人自动化。详见安装说明。</p><a class="button secondary" href="${escape(shortcutURL(plans.slice(0,1)))}">交给快捷指令</a><button class="text-button" data-action="export-alarms">导出起床计划 JSON</button></details>`:''}</section><section class="alarm-week"><div class="section-heading"><h2>接下来的一周</h2><span>按具体日期计算</span></div>${next.map(p=>`<div class="alarm-day"><div><strong>${p.date===today?'今天':weekdays[dayOfWeek(p.date)-1]}</strong><small>${dateLabel(p.date,true)}</small></div><div class="alarm-day-course"><strong>${p.firstCourse?escape(p.firstCourse.name):'上午无课'}</strong><small>${p.status==='ready'?`${p.firstCourse.start} 上课 · 提前 ${state.settings.leadMinutes} 分钟`:p.reason}</small></div><span class="alarm-day-time ${p.status==='rest'?'rest':''}">${p.alarmTime??(p.status==='review'?'待确认':'休息')}</span></div>`).join('')}<p class="helper">未确认晨课、停课日和上午无课日不会发布闹钟。课程修改后会重新计算；请定期打开应用刷新未来日期。</p></section></div>`;}
 function semesterPreview() {
   const form=$('#settings-form'), date=form?.elements.week1.value??(state.settings.semesterStart??state.settings.week1), total=+(form?.elements.totalWeeks.value??state.settings.totalWeeks);
   if(!validDate(date)||!Number.isInteger(total)||total<1||total>60)return '选择开学日期和总周数，查看学期范围。';
@@ -175,7 +185,7 @@ function updateCourseTimes(){
   const periods=periodsForDay(state.settings,+form.elements.day.value), first=+form.elements.periodStart?.value, last=+form.elements.periodEnd?.value;
   if(periods[first-1]&&periods[last-1]){form.elements.start.value=periods[first-1].start;form.elements.end.value=periods[last-1].end;}
 }
-function render(){const previousScroll=$('.grid-scroll')?.scrollLeft;root.innerHTML=`<div class="app-shell">${header()}<main>${route==='home'?home():route==='import'?importView():route==='alarms'?alarmsView():settingsView()}</main>${nav()}</div>`;document.documentElement.dataset.platform=platform();const scroll=$('.grid-scroll');if(scroll){if(previousScroll!==undefined)scroll.scrollLeft=previousScroll;else{const day=$('.day-header.today');if(day)scroll.scrollLeft=Math.max(0,day.offsetLeft-scroll.clientWidth/2+day.clientWidth/2);}}}
+function render(){const previousScroll=$('.grid-scroll')?.scrollLeft;root.innerHTML=`<div class="app-shell">${header()}<main>${route==='home'?home():route==='import'?importView():route==='alarms'?alarmsView():settingsView()}</main>${nav()}</div>`;document.documentElement.dataset.platform=platform();const scroll=$('.grid-scroll');if(scroll){if(previousScroll!==undefined)scroll.scrollLeft=previousScroll;else{const day=$('.day-header.today');if(day)scroll.scrollLeft=Math.max(0,day.offsetLeft-scroll.clientWidth/2+day.clientWidth/2);}}updateNativeNavigation();}
 
 function openEditor(id=null,review=false){
   const source=review?importResult?.courses:state.courses;
@@ -195,7 +205,7 @@ function openEditor(id=null,review=false){
     ${c.raw?`<details class="raw-details"><summary>对照识别原文</summary><pre>${escape(c.raw)}</pre></details>`:''}<p id="course-error" class="form-error" role="alert"></p>
     <div class="dialog-actions">${id?`<button type="button" class="text-button danger" data-${review?'remove-review':'delete-course'}="${escape(c.id)}">删除课程</button>`:'<span></span>'}<button class="button" type="submit">保存课程</button></div>
   </form>`;
-  dialog.showModal();dialog.querySelector('[name=name]').focus();
+  dialog.showModal();editorInitial=JSON.stringify([...new FormData($('#course-form'))]);updateNativeNavigation();dialog.querySelector('[name=name]').focus();
 }
 async function processFile(file){if(!file||importBusy)return;route='import';importBusy=true;progress='正在准备文件…';render();try{const doc=await importDocument(file,text=>{progress=text;const strong=$('.dropzone strong');if(strong)strong.textContent=text;});importResult={...parseTimetable(doc,state.settings),name:doc.name,kind:doc.kind};}catch(e){toast(e.message);}finally{importBusy=false;render();}}
 function download(name,text,type='application/json'){if(platform()!=='web'){callNative('exportFile',{name,text,type}).then(()=>toast('已打开系统分享 / 保存')).catch(e=>toast(e.message));return;}const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -234,11 +244,12 @@ document.addEventListener('click',async event=>{
     case'ics':download('晨课课程.ics',icsExport(state,state.settings.week1,state.settings.totalWeeks*7),'text/calendar');break;
     case'clear':if(confirm('将清空所有课程和设置，并取消本应用安排的闹钟。建议先导出备份。')){state=createState();periodDraft=null;save();toast('课表已清空');}break;
     case'period-inherit':delete periodDraft.periodsByDay[periodScope];refreshPeriods();break;
-    case'sync':try{if(platform()==='android'&&!androidClockMode()){const c=await callNative('requestPermissions');if(!c.exactAllowed||!c.notificationsAllowed){toast(c.message);break;}}await sync(true);render();}catch(e){toast(e.message);}break;
+    case'sync':try{if(platform()==='harmony'){const c=await callNative('requestPermissions');updateNativeCaps(c);if(c.reminderGranted===false){nativeStatus=c;render();break;}}if(platform()==='android'&&!androidClockMode()){const c=await callNative('requestPermissions');if(!c.exactAllowed||!c.notificationsAllowed){toast(c.message);break;}}await sync(true);render();}catch(e){toast(e.message);}break;
     case'clock-next':await openSystemClock('openClockAlarm');break;
     case'clock-test':await openSystemClock('testClockAlarm');break;
     case'clock-show':await openSystemClock('showClockAlarms');break;
-    case'test-alarm':if(platform()==='web'){toast('网页预览不能设置系统闹钟，请在原生版测试');}else{try{if(platform()==='android'){const c=await callNative('requestPermissions');if(!c.exactAllowed||!c.notificationsAllowed){toast(c.message);break;}}const r=await callNative('testAlarm');toast(r.message);}catch(e){toast(e.message);}}break;
+    case'cancel-test-alarm':await harmonyTest('cancelTestAlarm');break;
+    case'test-alarm':if(platform()==='harmony'){await harmonyTest();break;}if(platform()==='web'){toast('网页预览不能设置系统闹钟，请在原生版测试');}else{try{if(platform()==='android'){const c=await callNative('requestPermissions');if(!c.exactAllowed||!c.notificationsAllowed){toast(c.message);break;}}const r=await callNative('testAlarm');toast(r.message);}catch(e){toast(e.message);}}break;
   }
 });
 document.addEventListener('input',event=>{
@@ -286,18 +297,37 @@ document.addEventListener('submit',event=>{
 });
 document.addEventListener('dragover',event=>{if(event.target.closest('.dropzone'))event.preventDefault();});
 document.addEventListener('drop',event=>{if(event.target.closest('.dropzone')){event.preventDefault();processFile(event.dataTransfer.files[0]);}});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(route==='home')render();sync();}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(route==='home')render();if(platform()==='harmony')globalThis.chenkeNativeResume?.();else sync();}});
 setInterval(()=>{if(!document.hidden&&route==='home'&&!$('#course-dialog').open)render();},60000);
-globalThis.chenkeNativeDocument = doc=>{route='import';importResult={...parseTimetable(doc,state.settings),name:doc.name,kind:doc.kind??'text'};render();};
+$('#course-dialog').addEventListener('close',updateNativeNavigation);
+globalThis.chenkeNativeBack=()=>{
+  const dialog=$('#course-dialog');
+  if(dialog.open){
+    if(JSON.stringify([...new FormData($('#course-form'))])!==editorInitial&&!confirm('课程尚未保存，放弃这次修改？'))return true;
+    dialog.close();updateNativeNavigation();return true;
+  }
+  if(route!=='home'){route='home';render();return true;}
+  return false;
+};
+globalThis.chenkeNativeDocument=doc=>{route='import';importResult={...parseTimetable(doc,state.settings),name:doc.name,kind:doc.kind??'text'};render();};
 render();
 let nativeInitialized=false;
-globalThis.chenkeNativeReady=()=>{
+globalThis.chenkeNativeReady=async()=>{
   if(nativeInitialized||platform()==='web')return;nativeInitialized=true;
-  capabilities().then(c=>{nativeCaps=c;if(c.message)nativeStatus={mode:c.mode??'pending',scheduled:0,message:c.message};}).catch(e=>{nativeStatus={mode:'error',message:e.message};});
-  callNative('loadState').then(data=>{if(data?.state){state=validateState(data.state);render();}syncFingerprint='';sync();}).catch(e=>toast(`设备记录读取失败：${e.message}`));
+  try{const c=await capabilities();nativeCaps=c;if(c.message)nativeStatus={...c,mode:c.mode??'pending',scheduled:0};}
+  catch(e){nativeStatus={mode:'error',message:e.message};}
+  try{const data=await callNative('loadState');if(data?.state)state=validateState(data.state);}
+  catch(e){toast(`设备记录读取失败：${e.message}`);}
+  render();syncFingerprint='';sync();
 };
 globalThis.chenkeNativeResume=()=>{
-  if(nativeInitialized&&platform()!=='web')sync(true);
+  if(!nativeInitialized||platform()==='web')return;
+  clearTimeout(nativeResumeTimer);
+  nativeResumeTimer=setTimeout(async()=>{
+    try{const c=await capabilities();nativeCaps=c;if(c.message)nativeStatus={...c,mode:c.mode??'pending',scheduled:0};}
+    catch(e){nativeStatus={mode:'error',message:e.message};}
+    await sync(true);
+  },100);
 };
 if(platform()!=='web')globalThis.chenkeNativeReady();else{capabilities().then(c=>nativeCaps=c);sync();}
 if(platform()==='web'&&'serviceWorker'in navigator&&/^https?:$/.test(location.protocol)&&!import.meta.env.DEV)navigator.serviceWorker.register('./sw.js').catch(()=>{});

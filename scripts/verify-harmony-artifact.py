@@ -7,11 +7,15 @@ root=Path(__file__).resolve().parent.parent
 record=json.loads((root/'reports/harmony-build.json').read_text(encoding='utf-8'))
 package=root/record['artifact']
 assert hashlib.sha256(package.read_bytes()).hexdigest()==record['sha256']
+for source in record.get('sourceFiles',[]):
+    assert hashlib.sha256((root/source['path']).read_bytes()).hexdigest()==source['sha256'],source['path']
 with zipfile.ZipFile(package) as hap:
     assert hap.testzip() is None
     names=hap.namelist()
     manifest=json.loads(hap.read('module.json'))
     assert manifest['app']['bundleName']=='com.andijues.chenke'
+    assert manifest['app']['versionName']==record['version']
+    assert manifest['app']['versionCode']==record['versionCode']
     assert manifest['module']['name']=='entry'
     assert 'ohos.permission.PUBLISH_AGENT_REMINDER' in json.dumps(manifest)
     assert 'ets/modules.abc' in names
@@ -22,6 +26,8 @@ with zipfile.ZipFile(package) as hap:
         assert 'resources/rawfile/'+resource in names,resource
     assert not any(n.lower().endswith(('.p12','.p7b','.jks','.keystore','.pem','.csr')) for n in names)
     count=len([n for n in names if n.startswith('resources/rawfile/web/') and not n.endswith('/')])
+    assert hashlib.sha256(hap.read('resources/rawfile/web/app.js')).hexdigest()==record['webAppSHA256']
+    assert hap.read('resources/rawfile/web/app.js')==(root/'dist/app.js').read_bytes()
 record.update({'zipIntegrity':'passed','compiledArkTSBytecode':True,'bundleName':'com.andijues.chenke',
                'offlineWebFiles':count,'signed':False,'deviceInstalled':False,'lockScreenAlarmTested':False})
 (root/'reports/harmony-build.json').write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')

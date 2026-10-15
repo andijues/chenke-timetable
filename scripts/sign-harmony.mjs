@@ -27,8 +27,11 @@ const profile=typeof verified.content==='string'?JSON.parse(verified.content):ve
 const ids=profile['debug-info']?.['device-ids'];
 if(profile.type!=='debug'||profile['bundle-info']?.['bundle-name']!=='com.andijues.chenke'||!Array.isArray(ids)||ids.length!==1||ids[0]!==device.udid)throw Error('Profile 必须是晨课专用、仅绑定当前手机的调试文件');
 const input=path.join(root,'output/晨课-鸿蒙-未签名.hap'),output=path.join(root,'output/晨课-鸿蒙-已签名.hap');
+const unsignedBytes=await readFile(input),unsignedSHA256=createHash('sha256').update(unsignedBytes).digest('hex');
+const build=JSON.parse(await readFile(path.join(root,'reports/harmony-build.json'),'utf8'));
+if(build.sha256!==unsignedSHA256)throw Error('未签名 HAP 与当前构建记录不符，请先重新编译和校验');
 console.log('已核对证书与单设备 Profile，开始签名。');
 run(['sign-app','-mode','localSign','-keyAlias',secret.alias,'-keyPwd',secret.password,'-appCertFile',certFile,'-profileFile',profileFile,'-inFile',input,'-signAlg','SHA256withECDSA','-keystoreFile',secret.keystore,'-keystorePwd',secret.password,'-outFile',output,'-compatibleVersion','20']);
 run(['verify-app','-inFile',output,'-outCertChain',path.join(directory,'verified-app-chain.cer'),'-outProfile',path.join(directory,'verified-app-profile.p7b')]);
-const bytes=await readFile(output);const record={signedAt:new Date().toISOString(),artifact:'output/晨课-鸿蒙-已签名.hap',bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),signatureVerified:true,bundleName:'com.andijues.chenke',singleDeviceProfile:true,deviceInstalled:false,lockScreenAlarmTested:false};
+const bytes=await readFile(output);const record={signedAt:new Date().toISOString(),artifact:'output/晨课-鸿蒙-已签名.hap',version:build.version,versionCode:build.versionCode,unsignedSHA256,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),signatureVerified:true,bundleName:'com.andijues.chenke',singleDeviceProfile:true,deviceInstalled:false,lockScreenAlarmTested:false};
 await mkdir(path.join(root,'reports'),{recursive:true});await writeFile(path.join(root,'reports/harmony-signed.json'),JSON.stringify(record,null,2));console.log(JSON.stringify(record,null,2));

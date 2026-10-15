@@ -1,178 +1,7 @@
 import { webview } from '@kit.ArkWeb';
 import { common } from '@kit.AbilityKit';
-import { preferences } from '@kit.ArkData';
-import { notificationManager } from '@kit.NotificationKit';
-import { reminderAgentManager } from '@kit.BackgroundTasksKit';
-import { picker, fileIo } from '@kit.CoreFileKit';
-import { BusinessError } from '@kit.BasicServicesKit';
-
-interface WakePlan { id: string; fireAt: string; date: string; course: string; courseStart: string; }
-interface LedgerItem { key: string; reminderId: number; fireAt: string; course: string; }
-interface BridgePayload { state?: Object; plans?: WakePlan[]; name?: string; text?: string; type?: string; }
-interface BridgeMessage { id: string; action: string; payload: BridgePayload; }
-interface BridgeResult { platform?: string; supported?: boolean; mode?: string; scheduled?: number; message?: string; saved?: boolean; state?: Object; exported?: boolean; }
-interface BridgeResponse { id: string; data?: BridgeResult; error?: string; }
-interface SyncResult extends BridgeResult { mode: string; scheduled: number; message: string; }
-
-class HarmonyBridge {
-  private store?: preferences.Preferences;
-  private queue: Promise<void> = Promise.resolve();
-  private context: common.UIAbilityContext;
-  private controller: webview.WebviewController;
-  constructor(context: common.UIAbilityContext, controller: webview.WebviewController) {
-    this.context = context; this.controller = controller;
-  }
-  postMessage(raw: string): void {
-    let message: BridgeMessage;
-    try { message = JSON.parse(raw) as BridgeMessage; } catch { return; }
-    if (!message.id || !message.action || !message.payload) return;
-    // A save dialog must not block turning off or updating wake-up reminders.
-    if (message.action === 'exportFile') { this.execute(message).catch(() => {}); return; }
-    this.queue = this.queue.then(() => this.execute(message)).catch(() => {});
-  }
-  private async execute(message: BridgeMessage): Promise<void> {
-    try {
-      const data = await this.handle(message.action, message.payload);
-      this.reply({ id: message.id, data: data });
-    } catch (e) {
-      const error = e as BusinessError;
-      this.reply({ id: message.id, error: `${error.message || '设备操作失败'}${error.code ? ` (${error.code})` : ''}` });
-    }
-  }
-  private reply(value: BridgeResponse): void {
-    // The controller can detach while a system permission or file dialog is open.
-    try {
-      this.controller.runJavaScript(`window.chenkeNativeResult(${JSON.stringify(value)});`).catch(() => {});
-    } catch { /* The page will reconcile persisted state when it returns. */ }
-  }
-  private async getStore(): Promise<preferences.Preferences> {
-    if (!this.store) this.store = await preferences.getPreferences(this.context, {name: 'chenke'});
-    return this.store;
-  }
-  private async readLedger(): Promise<LedgerItem[]> {
-    const store = await this.getStore();
-    const raw = await store.get('alarmLedger', '[]');
-    return JSON.parse(raw as string) as LedgerItem[];
-  }
-  private async writeLedger(ledger: LedgerItem[]): Promise<void> {
-    const store = await this.getStore(); await store.put('alarmLedger', JSON.stringify(ledger)); await store.flush();
-  }
-  private async ensureNotifications(): Promise<void> {
-    if (!await notificationManager.isNotificationEnabled()) {
-      await notificationManager.requestEnableNotification(this.context);
-    }
-    if (!await notificationManager.isNotificationEnabled()) {
-      throw new Error('通知权限未开启。请在手机设置中允许晨课通知，再回来更新起床提醒。');
-    }
-    await notificationManager.addSlot(notificationManager.SlotType.SERVICE_INFORMATION);
-  }
-  private async publish(plan: WakePlan, notificationId: number): Promise<number> {
-    const date = new Date(plan.fireAt);
-    // Plans contain absolute ISO instants. The system calendar API accepts local components.
-    const request: reminderAgentManager.ReminderRequestCalendar = {
-      reminderType: reminderAgentManager.ReminderType.REMINDER_TYPE_CALENDAR,
-      dateTime: { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate(), hour: date.getHours(), minute: date.getMinutes(), second: date.getSeconds() },
-      title: '该起床啦', content: plan.courseStart ? `${plan.course} · ${plan.courseStart} 上课` : plan.course, expiredContent: '起床提醒已结束',
-      notificationId: notificationId, slotType: notificationManager.SlotType.SERVICE_INFORMATION,
-      ringDuration: 60, ringChannel: reminderAgentManager.RingChannel.RING_CHANNEL_ALARM,
-      customRingUri: 'resource://RAWFILE/wake.wav', snoozeTimes: 2, timeInterval: 300,
-      snoozeSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
-      wantAgent: {pkgName: 'com.andijues.chenke', abilityName: 'EntryAbility'},
-      actionButton: [{title: '关闭', type: reminderAgentManager.ActionButtonType.ACTION_BUTTON_TYPE_CLOSE}, {title: '稍后提醒', type: reminderAgentManager.ActionButtonType.ACTION_BUTTON_TYPE_SNOOZE}]
-    };
-    return await reminderAgentManager.publishReminder(request);
-  }
-  private async synchronize(plans: WakePlan[]): Promise<SyncResult> {
-    if (plans.length > 28) throw new Error('起床计划超过 28 个');
-    if (plans.some(plan => !plan.id.startsWith('chenke-') || !Number.isFinite(Date.parse(plan.fireAt)) || Date.parse(plan.fireAt) <= Date.now() || Date.parse(plan.fireAt) > Date.now() + 30 * 86400000)) throw new Error('起床计划无效或已过期');
-    const keys: string[] = [];
-    for (const plan of plans) { if (keys.includes(plan.id)) throw new Error('起床计划有重复日期，请重新更新'); keys.push(plan.id); }
-    if (plans.length) await this.ensureNotifications();
-    let ledger = await this.readLedger();
-    // getValidReminders() returns requests without IDs. This API returns ReminderInfo.
-    const active = await reminderAgentManager.getAllValidReminders();
-    for (const item of ledger) {
-      // Returning from the permission dialog must not cancel the one-minute test.
-      if (item.key === 'chenke-test') {
-        if (Date.now() > Date.parse(item.fireAt) + 11 * 60000 && !active.some(info => info.reminderId === item.reminderId)) {
-          ledger = ledger.filter(row => row.key !== item.key); await this.writeLedger(ledger);
-        }
-        continue;
-      }
-      const desired = plans.find(plan => plan.id === item.key);
-      if (!desired || desired.fireAt !== item.fireAt || desired.course !== item.course) {
-        if (active.some(info => info.reminderId === item.reminderId)) await reminderAgentManager.cancelReminder(item.reminderId);
-        ledger = ledger.filter(row => row.key !== item.key); await this.writeLedger(ledger);
-      }
-    }
-    for (let index = 0; index < plans.length; index++) {
-      const plan = plans[index];
-      const saved = ledger.find(row => row.key === plan.id);
-      if (saved && active.some(info => info.reminderId === saved.reminderId)) continue;
-      ledger = ledger.filter(row => row.key !== plan.id);
-      const notificationId = Number(plan.date.replace(/-/g, ''));
-      let id: number;
-      try { id = await this.publish(plan, notificationId); }
-      catch (e) {
-        const error = e as BusinessError;
-        const reason = error.code === 1700002 ? '系统提醒数量已达上限' : error.message || '系统未接受提醒';
-        throw new Error(`已完成 ${index}/${plans.length} 个起床提醒，${plan.course} 未设置：${reason}。请返回起床页重新更新。`);
-      }
-      ledger.push({key: plan.id, reminderId: id, fireAt: plan.fireAt, course: plan.course}); await this.writeLedger(ledger);
-    }
-    return {mode: 'system-reminder', scheduled: plans.length, message: plans.length ? '系统已接受起床代理提醒。请先做锁屏测试，确认声音、通知和后台设置。' : '本应用的起床提醒已取消或当前无晨课。'};
-  }
-  private async handle(action: string, payload: BridgePayload): Promise<BridgeResult> {
-    switch (action) {
-      case 'capabilities': {
-        const active = await reminderAgentManager.getAllValidReminders();
-        console.info(`[Chenke] own active reminders: ${active.length}`);
-        return {platform: 'harmony', supported: true, mode: 'pending', message: '鸿蒙系统代理提醒就绪，启用后请求通知权限。'};
-      }
-      case 'saveState': {
-        if (!payload.state) throw new Error('课表格式无效');
-        const store = await this.getStore(); await store.put('state', JSON.stringify(payload.state)); await store.flush(); return {saved: true};
-      }
-      case 'loadState': {
-        const store = await this.getStore(); const raw = await store.get('state', '');
-        return raw ? {state: JSON.parse(raw as string) as Object} : {};
-      }
-      case 'syncAlarms': return await this.synchronize(payload.plans || []);
-      case 'testAlarm': {
-        await this.ensureNotifications();
-        let ledger = await this.readLedger(); const old = ledger.find(item => item.key === 'chenke-test');
-        if (old) {
-          const active = await reminderAgentManager.getAllValidReminders();
-          if (active.some(info => info.reminderId === old.reminderId)) await reminderAgentManager.cancelReminder(old.reminderId);
-        }
-        const date = new Date(Date.now() + 60000);
-        let id: number;
-        try {
-          id = await this.publish({id: 'chenke-test', fireAt: date.toISOString(), date: '', course: '一分钟测试', courseStart: ''}, 999999);
-        } catch (e) {
-          const error = e as BusinessError;
-          if (error.code === 1700002) {
-            const active = await reminderAgentManager.getAllValidReminders();
-            console.error(`[Chenke] publish test rejected: 1700002; own active reminders: ${active.length}`);
-            throw new Error(`系统拒绝提醒（1700002），晨课当前有 ${active.length} 个有效提醒。请检查应用的代理提醒开放能力与签名 Profile。`);
-          }
-          throw new Error(`${error.message || '系统未接受测试提醒'}${error.code ? ` (${error.code})` : ''}`);
-        }
-        ledger = ledger.filter(item => item.key !== 'chenke-test'); ledger.push({key: 'chenke-test', reminderId: id, fireAt: date.toISOString(), course: '一分钟测试'}); await this.writeLedger(ledger);
-        return {message: '系统已接受一分钟测试提醒，请锁屏验证响铃。'};
-      }
-      case 'exportFile': {
-        if (!payload.text || !payload.name || payload.text.length > 5000000) throw new Error('导出内容无效');
-        const dialog = new picker.DocumentViewPicker(this.context); const options = new picker.DocumentSaveOptions(); options.newFileNames = [payload.name.replace(/[\\/]/g, '_')];
-        const uris = await dialog.save(options); if (!uris.length) throw new Error('已取消保存');
-        const file = fileIo.openSync(uris[0], fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
-        try { fileIo.writeSync(file.fd, payload.text); } finally { fileIo.closeSync(file); }
-        return {exported: true};
-      }
-      default: throw new Error('未支持的设备操作');
-    }
-  }
-}
+import { picker } from '@kit.CoreFileKit';
+import { HarmonyBridge } from '../HarmonyBridge';
 
 @Entry
 @Component
@@ -180,6 +9,20 @@ struct Index {
   private controller: webview.WebviewController = new webview.WebviewController();
   private bridge: HarmonyBridge = new HarmonyBridge(getContext(this) as common.UIAbilityContext, this.controller);
   private pageReady: boolean = false;
+  private foregroundHandler: () => void = () => {
+    this.runPageScript('window.chenkeNativeResume && window.chenkeNativeResume();');
+  };
+  aboutToAppear(): void {
+    (getContext(this) as common.UIAbilityContext).eventHub.on('chenkeForeground', this.foregroundHandler);
+  }
+  aboutToDisappear(): void {
+    (getContext(this) as common.UIAbilityContext).eventHub.off('chenkeForeground', this.foregroundHandler);
+  }
+  onBackPress(): boolean {
+    if (!this.pageReady || !this.bridge.shouldHandleBack()) return false;
+    this.runPageScript('window.chenkeNativeBack && window.chenkeNativeBack();');
+    return true;
+  }
   private runPageScript(script: string): void {
     // runJavaScript can throw synchronously before the Web component attaches.
     if (!this.pageReady) return;

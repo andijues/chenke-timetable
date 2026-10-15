@@ -111,8 +111,13 @@ const output=path.join(stage,'entry/build/default/outputs/default');
 const haps=(await readdir(output)).filter(name=>name.endsWith('-unsigned.hap'));
 if(haps.length!==1)throw Error('没有找到唯一的未签名 HAP，请查看 reports/harmony-build.log。');
 const bytes=await readFile(path.join(output,haps[0]));
+const app=JSON.parse(await readFile(path.join(source,'AppScope/app.json5'),'utf8')).app;
+const sourceFiles=[];
+for(const relative of ['entry/src/main/ets/HarmonyBridge.ets','entry/src/main/ets/pages/Index.ets','entry/src/main/ets/entryability/EntryAbility.ets']){
+  sourceFiles.push({path:'native/harmony/'+relative,sha256:createHash('sha256').update(await readFile(path.join(stage,relative))).digest('hex')});
+}
 const destination=path.join(root,'output/晨课-鸿蒙-未签名.hap');
 await mkdir(path.dirname(destination),{recursive:true});await writeFile(destination,bytes);
-const report={compiledAt:new Date().toISOString(),build:'success',sdk,stage,artifact:path.relative(root,destination).replaceAll('\\','/'),bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),signed:false,deviceInstalled:false,lockScreenAlarmTested:false};
+const report={compiledAt:new Date().toISOString(),build:'success',version:app.versionName,versionCode:app.versionCode,sdk,stage,artifact:path.relative(root,destination).replaceAll('\\','/'),bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),webAppSHA256:createHash('sha256').update(await readFile(path.join(stage,'entry/src/main/resources/rawfile/web/app.js'))).digest('hex'),sourceFiles,signed:false,deviceInstalled:false,lockScreenAlarmTested:false};
 await writeFile(path.join(root,'reports/harmony-build.json'),JSON.stringify(report,null,2));
 console.log(JSON.stringify(report,null,2));

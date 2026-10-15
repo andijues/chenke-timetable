@@ -1,6 +1,8 @@
 # 晨课 · 个人课表
 
-一个零付费服务、无服务器的个人课表项目。共享界面 0.2.2、Android 0.2.4 增加“交给系统时钟”，由用户核对下一次起床闹钟。**本机鸿蒙 7 的卓易通实测：0.2.3 退出后台后不响；0.2.4 已更新安装，但该环境没有提供创建时钟闹钟的接口，不能直接调用鸿蒙自带时钟。** 鸿蒙、iOS 安装包保持 0.2.0。2026-10-15 刷新华为后台后，“代理提醒”仍为审核中，尚未更新带该能力的 Profile，也未安装鸿蒙版。
+一个零付费服务、无服务器的个人课表项目。共享界面 0.2.3，鸿蒙原生版 0.2.1 已更新本机课表编辑、系统返回与前后台状态处理，以及代理提醒授权和安全更新逻辑；本轮只生成未签名 HAP，等待代理提醒审批后再更新签名，暂不安装。Android 安装包仍为 0.2.4，iOS 安装包仍为 0.2.0。
+
+本机鸿蒙 7 的卓易通实测：Android 0.2.3 退出后台后不响；0.2.4 的系统时钟接口调用失败。原生鸿蒙采用系统代理提醒路径。最近一次华为后台检查（2026-10-15）仍为审核中，本轮未再次查询、未更新 Profile 或签名，也没有运行手机安装命令。
 
 用户设备：鸿蒙 7、最新版 iOS；只有 Windows，没有 Mac。
 
@@ -41,10 +43,11 @@ npm.cmd ci --ignore-scripts
 npm.cmd run assets
 npm.cmd run build
 npm.cmd test
+npm.cmd run test:harmony
 npm.cmd run test:ui
 ```
 
-依赖采用 package-lock.json 固定版本。`assets` 仅构建时从开源项目下载中文/英文 OCR 模型，应用运行不调用识别服务。`build` 把 dist 复制到三个原生项目内。UI 测试当前使用 Windows Edge，包含真实样本文件上传与 OCR。
+`test:harmony` 需要 Node.js 24，执行实际 ArkTS 桥接源码并以模拟系统服务验证授权、提醒替换和取消；不等于真机响铃验收。依赖采用 package-lock.json 固定版本。`assets` 仅构建时从开源项目下载中文/英文 OCR 模型，应用运行不调用识别服务。`build` 把 dist 复制到三个原生项目内。UI 测试当前使用 Windows Edge，包含真实样本文件上传与 OCR。
 
 ## Android 安装与构建
 
@@ -52,7 +55,7 @@ Android 0.2.4 输出为 output/晨课-Android-调试.apk；实现官方 AlarmClo
 
 ## 鸿蒙 7 安装
 
-鸿蒙工程为 0.2.0，目标 API 26、最低 API 20，包名 `com.andijues.chenke`。本机官方工具位于 `D:\command-line-tools`，已生成未签名及已签名 HAP。当前签名包仅适用于已登记的自己的手机；本次没有安装。
+鸿蒙工程为 0.2.1，目标 API 26、最低 API 20，包名 `com.andijues.chenke`。本机官方工具位于 `D:\command-line-tools`。本轮只生成新版未签名 HAP；`output/晨课-鸿蒙-已签名.hap` 仍是旧版 0.2.0，不能当作本轮交付。等待代理提醒能力获准后再下载 Profile、更新签名；本轮不安装。
 
 完整步骤和命令见 [Windows 构建与安装鸿蒙版](docs/Windows安装鸿蒙.md)。
 
