@@ -192,7 +192,7 @@ struct Index {
     const response = new WebResourceResponse();
     const context = getContext(this) as common.UIAbilityContext;
     try {
-      const path = decodeURIComponent(url.replace('https://chenke.local/', '').split('?')[0]);
+      const path = decodeURIComponent(url.replace('https://chenke.local/v3/', '').split('?')[0]);
       if (path.includes('..') || path.includes('\\')) throw new Error('路径无效');
       const bytes = context.resourceManager.getRawFileContentSync(`web/${path || 'index.html'}`);
       response.setResponseData(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
@@ -208,7 +208,7 @@ struct Index {
   build() {
     Column() {
       // Virtual HTTPS origin is entirely served from bundled raw files. No website/server is contacted.
-      Web({src: 'https://chenke.local/index.html', controller: this.controller})
+      Web({src: 'https://chenke.local/v3/index.html', controller: this.controller})
         .javaScriptAccess(true).domStorageAccess(true).fileAccess(true)
         .javaScriptProxy({object: this.bridge, name: 'HarmonyBridge', methodList: ['postMessage'], controller: this.controller})
         .onInterceptRequest(event => {

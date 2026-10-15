@@ -1,7 +1,8 @@
-import {uid,createState,makeDemo,weekdays,minutes,clock,dateParts,addDays,mondayOf,dayOfWeek,weekNumber,parseWeeks,formatWeeks,coursesOn,morningPlan,planAlarms,courseStatus,conflicts,validateCourse,validateState,icsExport} from './core.mjs';
+import {uid,createState,makeDemo,weekdays,minutes,clock,dateParts,addDays,mondayOf,dayOfWeek,weekNumber,parseWeeks,formatWeeks,coursesOn,morningPlan,planAlarms,courseStatus,conflicts,validateCourse,validateState,icsExport,weeksForRule,periodsForDay,validatePeriods,resolveCourseTime,validDate} from './core.mjs';
 import {parseTimetable} from './parser.mjs';
 import {importDocument} from './importer.mjs';
 import {platform,callNative,capabilities,dispatchAlarms,shortcutURL} from './bridge.mjs';
+import {inferWeekRule,weekSummary,weeksEditor,coursePeriodControls,resizePeriods,periodChart,periodSliders,periodsEditor} from './schedule-ui.mjs';
 
 const KEY='chenke.state.v1'; const $=s=>document.querySelector(s);
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -12,6 +13,7 @@ try {const raw=localStorage.getItem(KEY);if(raw)state=validateState(JSON.parse(r
 let route='home', view='week', selected=dateParts().date, showAllDays=false;
 let importResult=null, importBusy=false, progress='', nativeStatus={mode:'pending',scheduled:0,message:'尚未启用系统闹钟'}, nativeCaps=null;
 let syncFingerprint='', syncRunning=false, syncAgain=false;
+let periodDraft=null, periodScope='common', periodActive=0;
 const root=$('#app');
 function updateMobileViewport(){
   const viewport=window.visualViewport;
@@ -44,11 +46,11 @@ function weekLabel(){const w=weekNumber(selected,state.settings.week1);return w<
 function header() {return `<header class="topbar"><a class="brand" href="#home" aria-label="晨课课表主页"><span class="brand-mark">${icon('calendar')}</span><strong>晨课<span>我的时间，心里有数</span></strong></a><button class="button compact" data-action="import">${icon('upload')}<span>导入课表</span></button></header>`;}
 function nav(){return `<nav class="bottom-nav" aria-label="主导航">${[['home','calendar','课表'],['import','upload','导入'],['alarms','bell','闹钟'],['settings','settings','设置']].map(([id,i,t])=>`<button data-route="${id}" class="nav-item ${route===id?'active':''}" ${route===id?'aria-current="page"':''}>${icon(i)}<span>${t}</span></button>`).join('')}</nav>`;}
 function demoBanner(){return state.demo?`<div class="demo-strip">${icon('book')}<span>演示课表 · 不会设置闹钟</span><button class="text-button" data-action="new">开始自己的课表${icon('arrow')}</button></div>`:'';}
-function emptyHome(){return `<section class="empty-home"><div class="empty-graphic">${icon('calendar')}</div><h1>把课表放进生活里。</h1><p>导入 PDF 或课表图片，校对一次。<br>什么时候上课、明早几点起床，都一目了然。</p><button class="button" data-action="import">${icon('upload')}导入我的课表</button><button class="text-button" data-action="add">手动添加课程${icon('plus')}</button><button class="text-button" data-action="demo">先体验演示课表${icon('arrow')}</button><div class="empty-notes"><span>${icon('check')}文件在本机识别</span><span>${icon('check')}课程随时可修改</span></div></section>`;}
+function emptyHome(){return `<section class="empty-home"><div class="empty-graphic">${icon('calendar')}</div><h1>把课表放进生活里。</h1><p>导入 PDF 或图片，也可以直接手动排课。<br>先设好学期与节次，时间和周次都由你调整。</p><button class="button" data-action="import">${icon('upload')}导入我的课表</button><button class="button secondary" data-action="add">${icon('plus')}手动添加课程</button><button class="text-button" data-route="settings">设置学期与节次${icon('arrow')}</button><button class="text-button" data-action="demo">先体验演示课表${icon('arrow')}</button><div class="empty-notes"><span>${icon('check')}文件在本机识别</span><span>${icon('check')}课程随时可修改</span></div></section>`;}
 function wakeStrip(){const tomorrow=addDays(dateParts().date,1);const plan=morningPlan(state,tomorrow);const arranged=state.settings.enabled&&!state.demo&&['alarm','system-reminder'].includes(nativeStatus.mode)&&nativeStatus.scheduled>0;const status=state.demo?'演示预览':!state.settings.enabled?'闹钟未启用':platform()==='web'?'网页未设置系统闹钟':nativeStatus.mode==='error'?'系统调度失败':arranged?'系统已安排':'等待系统调度';return `<div class="wake-strip"><span class="wake-symbol">${icon(plan.status==='rest'?'moon':'sun')}</span><div class="wake-copy"><strong>${plan.status==='ready'?'明早，建议起床时间':plan.status==='review'?'明早的课程还需确认':'明早，留给自己'}</strong><span>${plan.status==='ready'?`${escape(plan.firstCourse.name)} ${plan.firstCourse.start} · 提前 ${state.settings.leadMinutes} 分钟`:plan.status==='review'?'校对并确认晨课后，才会生成闹钟':'上午无课，不安排起床闹钟'}</span><small class="wake-status">${status}</small></div><button class="wake-time" data-route="alarms" aria-label="查看明早起床计划">${plan.alarmTime??'休息'}${icon('arrow')}</button></div>`;}
 function home(){
   if(!state.courses.length)return emptyHome();
-  return `${demoBanner()}<div class="page-heading"><div><h1>${dateLabel(selected)}<span>${weekdays[dayOfWeek(selected)-1]}</span></h1><p>${weekLabel()}<span class="dot-separator">·</span>${selected===dateParts().date?'今天':selected} <span class="now-clock">现在 ${dateParts().time}</span></p></div><button class="icon-button" data-action="add" aria-label="添加课程">${icon('plus')}</button></div>${wakeStrip()}<div class="workspace"><section class="schedule-panel"><div class="schedule-toolbar"><div class="segmented" aria-label="课表视图"><button data-view="week" class="${view==='week'?'active':''}">周课表</button><button data-view="day" class="${view==='day'?'active':''}">今日</button></div><div class="week-navigation"><button class="icon-button previous" data-action="previous" aria-label="前一周">${icon('arrow')}</button><button class="text-button" data-action="today">今天</button><button class="icon-button" data-action="next" aria-label="后一周">${icon('arrow')}</button></div></div>${view==='week'?weekGrid():dayList(selected)}${view==='week'?`<div class="schedule-foot"><span><i class="now-dot"></i>指针为中国标准时间的当前时刻</span><button class="text-button" data-action="all-days">${showAllDays?'显示五天':'显示周末'}</button></div>`:''}</section><aside class="day-aside"><div class="aside-heading"><h2>今天的安排</h2><span>${coursesOn(state,dateParts().date).length} 门课</span></div>${dayList(dateParts().date,true)}<div class="aside-note">${icon('moon')}<p>好的早晨，<br>从心里有数开始。</p></div></aside></div>`;
+  return `${demoBanner()}<div class="page-heading"><div><h1>${dateLabel(selected)}<span>${weekdays[dayOfWeek(selected)-1]}</span></h1><p>${weekLabel()}<span class="dot-separator">·</span>${selected===dateParts().date?'今天':selected} <span class="now-clock">现在 ${dateParts().time}</span></p></div><button class="button secondary compact" data-action="add">${icon('plus')}添加课程</button></div>${wakeStrip()}<div class="workspace"><section class="schedule-panel"><div class="schedule-toolbar"><div class="segmented" aria-label="课表视图"><button data-view="week" class="${view==='week'?'active':''}">周课表</button><button data-view="day" class="${view==='day'?'active':''}">今日</button></div><div class="week-navigation"><button class="icon-button previous" data-action="previous" aria-label="前一周">${icon('arrow')}</button><button class="text-button" data-action="today">今天</button><button class="icon-button" data-action="next" aria-label="后一周">${icon('arrow')}</button></div></div><div class="week-jump"><label>查看周次<select id="view-week" aria-label="查看学期周次"><option value="0" ${weekNumber(selected,state.settings.week1)<1||weekNumber(selected,state.settings.week1)>state.settings.totalWeeks?'selected':''}>按当前日期</option>${Array.from({length:state.settings.totalWeeks},(_,i)=>`<option value="${i+1}" ${weekNumber(selected,state.settings.week1)===i+1?'selected':''}>第 ${i+1} 周${(i+1)%2?' · 单周':' · 双周'}</option>`).join('')}</select></label><span>${dateLabel(mondayOf(selected),true)}–${dateLabel(addDays(mondayOf(selected),6),true)}</span></div>${view==='week'?weekGrid():dayList(selected)}${view==='week'?`<div class="schedule-foot"><span><i class="now-dot"></i>指针为中国标准时间的当前时刻</span><button class="text-button" data-action="all-days">${showAllDays?'显示五天':'显示周末'}</button></div>`:''}</section><aside class="day-aside"><div class="aside-heading"><h2>今天的安排</h2><span>${coursesOn(state,dateParts().date).length} 门课</span></div>${dayList(dateParts().date,true)}<div class="aside-note">${icon('moon')}<p>好的早晨，<br>从心里有数开始。</p></div></aside></div>`;
 }
 function weekGrid(){
   const monday=mondayOf(selected);const cols=showAllDays?7:5;
@@ -71,15 +73,104 @@ function reviewView(){const cs=importResult.courses;return `<section class="revi
 function alarmExplanation(){
   if(platform()==='ios')return '系统闹钟权限开启后，由 iOS 负责锁屏和退出应用后的响铃。请不要将晨课设为隐藏或需要密码解锁的应用，以免闹钟失效。';
   if(platform()==='harmony')return '由鸿蒙系统代理负责响铃，使用闹钟音量，可关闭应用。请先允许通知，再做一次锁屏响铃测试。';
+  if(platform()==='android')return '由 Android 系统准确闹钟触发原生响铃。请允许通知、“闹钟和提醒”及锁屏全屏显示，并检查闹钟音量；如手机限制后台运行，请在系统设置中允许晨课自启动，再退出应用做锁屏测试。';
   return '网页只显示起床计划。安装手机原生版后，才能由系统在锁屏和退出应用后负责响铃。';
 }
 function alarmsView(){const today=dateParts().date;const plans=planAlarms({...state,demo:false,settings:{...state.settings,enabled:true}});const next=Array.from({length:7},(_,i)=>morningPlan(state,addDays(today,i)));return `<div class="page-heading"><div><h1>起床，刚刚好。</h1><p>只为上午的第一节课留好时间。</p></div>${icon('sun','heading-icon')}</div><div class="alarm-layout"><section class="alarm-main"><div class="alarm-rule"><div class="rule-top"><h2>自动安排起床闹钟</h2><label class="switch"><input type="checkbox" id="alarm-enabled" ${state.settings.enabled?'checked':''} ${state.demo?'disabled':''} aria-label="自动安排起床闹钟"><span></span></label></div><p>${state.demo?'演示课表不发布闹钟，先导入你的真实课表。':'启用后，根据已确认课程更新未来 28 天的起床计划。'}</p><div class="lead-display"><span>提前</span><strong id="lead-value">${state.settings.leadMinutes}</strong><span>分钟起床</span></div><input id="lead-slider" type="range" min="0" max="240" step="5" value="${Math.min(240,state.settings.leadMinutes)}" aria-label="提前起床分钟"><div class="range-labels"><span>跟随首课</span><span>提前 4 小时</span></div><label class="inline-field">精确提前量<input id="lead-input" type="number" inputmode="numeric" aria-label="精确提前起床分钟" min="0" max="1440" value="${state.settings.leadMinutes}"><span>分钟</span></label><div class="rule-example">${icon('clock')}<span>例如 08:30 上课 → ${clock((510-state.settings.leadMinutes+1440)%1440)} 起床${state.settings.leadMinutes>510?'（前一天）':''}</span></div></div><div class="native-status ${nativeStatus.mode==='error'?'error':''}">${icon(nativeStatus.mode==='alarm'||nativeStatus.mode==='system-reminder'?'check':'bell')}<div><strong>${nativeStatus.mode==='alarm'?'系统闹钟已调度':nativeStatus.mode==='system-reminder'?'系统代理提醒已调度':nativeStatus.mode==='preview'?'当前为网页起床预览':nativeStatus.mode==='notification'?'已安排普通通知提醒':nativeStatus.mode==='error'?'闹钟尚未设置':'系统调度状态'}</strong><p>${escape(nativeStatus.message)}</p>${nativeStatus.scheduled?`<small>已安排 ${nativeStatus.scheduled} 个 · 发布窗口 28 天</small>`:''}</div></div><div class="alarm-actions"><button class="button secondary" data-action="sync">检查权限并更新</button><button class="text-button" data-action="test-alarm">测试 1 分钟后响铃</button></div><p class="helper">${escape(alarmExplanation())}</p>${platform()==='web'?`<details class="shortcut-help"><summary>iOS 零花费长期使用：快捷指令方案</summary><p>网页不能直接设系统闹钟。安装“晨课闹钟”快捷指令后，可把下一次起床时间传给“时钟”创建闹钟；每天自动判断需另配置个人自动化。详见安装说明。</p><a class="button secondary" href="${escape(shortcutURL(plans.slice(0,1)))}">交给快捷指令</a><button class="text-button" data-action="export-alarms">导出起床计划 JSON</button></details>`:''}</section><section class="alarm-week"><div class="section-heading"><h2>接下来的一周</h2><span>按具体日期计算</span></div>${next.map(p=>`<div class="alarm-day"><div><strong>${p.date===today?'今天':weekdays[dayOfWeek(p.date)-1]}</strong><small>${dateLabel(p.date,true)}</small></div><div class="alarm-day-course"><strong>${p.firstCourse?escape(p.firstCourse.name):'上午无课'}</strong><small>${p.status==='ready'?`${p.firstCourse.start} 上课 · 提前 ${state.settings.leadMinutes} 分钟`:p.reason}</small></div><span class="alarm-day-time ${p.status==='rest'?'rest':''}">${p.alarmTime??(p.status==='review'?'待确认':'休息')}</span></div>`).join('')}<p class="helper">未确认晨课、停课日和上午无课日不会发布闹钟。课程修改后会重新计算；请定期打开应用刷新未来日期。</p></section></div>`;}
-function settingsView(){const s=state.settings;return `<div class="page-heading"><div><h1>按你的节奏</h1><p>节次、学期和例外日期，都可以调整。</p></div></div><div class="settings-layout"><section class="settings-section"><h2>学期与时间</h2><form id="settings-form" class="settings-form"><label>第 1 周的星期一<input name="week1" type="date" value="${s.week1}" required></label><label>学期周数<input name="totalWeeks" type="number" inputmode="numeric" min="1" max="60" value="${s.totalWeeks}" required></label><label>上午结束时间<input name="morningEnd" type="time" value="${s.morningEnd}" required><small>首课早于这个时间，才算上午有课。</small></label><p class="helper">课表与闹钟统一使用中国标准时间 UTC+8。</p><button class="button" type="submit">保存学期设置</button></form><h2>学校节次表</h2><p class="helper">只有 PDF 写节次时才用它推算；每门课程的时间仍可单独修改。</p><form id="periods-form"><div class="period-grid">${s.periods.map((p,i)=>`<div class="period-row"><strong>第 ${i+1} 节</strong><input type="time" name="p${i}s" value="${p.start}" aria-label="第 ${i+1} 节开始"><span>至</span><input type="time" name="p${i}e" value="${p.end}" aria-label="第 ${i+1} 节结束"></div>`).join('')}</div><button class="button secondary" type="submit">保存节次时间</button></form></section><section class="settings-section"><h2>停课、放假与调课</h2><form id="exception-form" class="exception-form"><label>日期<input type="date" name="date" required></label><label>安排<select name="type"><option value="skip">这天停课 / 放假</option><option value="replaceDay">按其他星期上课</option></select></label><label>调课到<select name="day">${weekdays.map((d,i)=>`<option value="${i+1}">${d}</option>`).join('')}</select></label><label>备注<input name="note" maxlength="100" placeholder="例如：国庆停课"></label><button class="button secondary" type="submit">添加例外日期</button></form><div class="exception-list">${state.exceptions.length?state.exceptions.map((e,i)=>`<div><span><strong>${e.date}</strong> ${e.type==='skip'?'停课 / 放假':e.type==='cancelCourse'?'单门停课':`按${weekdays[e.day-1]}上课`}<small>${escape(e.note??'')}</small></span><button class="icon-button" data-delete-exception="${i}" aria-label="删除 ${e.date} 例外">${icon('close')}</button></div>`).join(''):'<p class="helper">还没有例外日期。单次补课可在添加课程时指定日期。</p>'}</div><h2>数据与备份</h2><div class="data-actions"><button class="button secondary" data-action="backup">${icon('download')}导出备份</button><label class="button secondary restore-label">恢复备份<input id="restore-input" type="file" accept="application/json,.json"></label><button class="button secondary" data-action="ics">导出日历 .ics</button></div><p class="helper">备份包含课程和设置。日历文件用于查看课程，不等于起床闹钟。</p><div class="danger-zone"><button class="text-button danger" data-action="clear">${icon('trash')}清空课表与本应用闹钟</button></div></section></div>`;}
+function semesterPreview() {
+  const form=$('#settings-form'), date=form?.elements.week1.value??(state.settings.semesterStart??state.settings.week1), total=+(form?.elements.totalWeeks.value??state.settings.totalWeeks);
+  if(!validDate(date)||!Number.isInteger(total)||total<1||total>60)return '选择开学日期和总周数，查看学期范围。';
+  const monday=mondayOf(date), current=weekNumber(dateParts().date,monday);
+  return '第 1 周：'+monday+' 至 '+addDays(monday,6)+'；常规课程从 '+date+' 开始。学期至 '+addDays(monday,total*7-1)+'，'+(current<1?'尚未开学':current>total?'已结束':'今天为第 '+current+' 周')+'。';
+}
+function settingsView(){
+  const s=state.settings;
+  if(!periodDraft)periodDraft=structuredClone({...s,periodsByDay:s.periodsByDay??{}});
+  return `<div class="page-heading"><div><h1>按你的节奏</h1><p>先定学期，再排节次。每门课的日期和时间都能校正。</p></div></div>
+  <div class="settings-layout"><section class="settings-section">
+    <h2>学期与时间</h2><form id="settings-form" class="settings-form">
+      <label>第 1 周开始上课的日期<input name="week1" type="date" value="${s.semesterStart??s.week1}" required><small>可以选择任意星期，所属周的周一作为第 1 周起点。</small></label>
+      <label>学期周数<input name="totalWeeks" type="number" inputmode="numeric" min="1" max="60" value="${s.totalWeeks}" required></label>
+      <label>上午结束时间<input name="morningEnd" type="time" value="${s.morningEnd}" required><small>首课早于这个时间，才算上午有课。</small></label>
+      <p id="semester-preview" class="semester-preview">${escape(semesterPreview())}</p>
+      <button class="button" type="submit">保存学期设置</button>
+    </form>
+    <h2>每天的节次与时间</h2><p class="helper">点时间轴选择一节，拖动或精确填写时间。可设通用表，也可单独设置某个星期。</p>
+    <div id="period-editor">${periodsEditor(periodDraft,periodScope,periodActive)}</div>
+  </section><section class="settings-section">
+    <div class="section-heading"><h2>课程管理</h2><button class="button secondary compact" data-action="add">${icon('plus')}添加课程</button></div>
+    <p class="helper">全部 ${state.courses.length} 门课程都在这里，包括本周没有安排的课程。</p>
+    <div class="course-management">${state.courses.length?[...state.courses].sort((a,b)=>a.day-b.day||minutes(a.start)-minutes(b.start)).map(c=>{const time=resolveCourseTime(c,s);return `<button class="managed-course" data-edit="${escape(c.id)}"><span class="course-color ${escape(c.color??'mint')}"></span><span><strong>${escape(c.name)}</strong><small>${weekdays[c.day-1]} · ${time.start}–${time.end}${c.periodRange?` · 第${c.periodRange.start}–${c.periodRange.end}节`:''}</small><small>${c.date?c.date+' · 单次课程':escape(formatWeeks(c.weeks))}${c.confirmed?'':' · 待确认'}</small></span>${icon('arrow')}</button>`;}).join(''):'<p class="helper">从这里手动添加，或导入 PDF 后逐门校对。</p>'}</div>
+    <h2>停课、放假与调课</h2><form id="exception-form" class="exception-form"><label>日期<input type="date" name="date" required></label><label>安排<select name="type"><option value="skip">这天停课 / 放假</option><option value="replaceDay">按其他星期上课</option></select></label><label>调课到<select name="day">${weekdays.map((d,i)=>`<option value="${i+1}">${d}</option>`).join('')}</select></label><label>备注<input name="note" maxlength="100" placeholder="例如：国庆停课"></label><button class="button secondary" type="submit">添加例外日期</button></form>
+    <div class="exception-list">${state.exceptions.length?state.exceptions.map((e,i)=>`<div><span><strong>${e.date}</strong> ${e.type==='skip'?'停课 / 放假':e.type==='cancelCourse'?'单门停课':`按${weekdays[e.day-1]}上课`}<small>${escape(e.note??'')}</small></span><button class="icon-button" data-delete-exception="${i}" aria-label="删除 ${e.date} 例外">${icon('close')}</button></div>`).join(''):'<p class="helper">还没有例外日期。单次补课可在添加课程时指定日期。</p>'}</div>
+    <h2>数据与备份</h2><div class="data-actions"><button class="button secondary" data-action="backup">${icon('download')}导出备份</button><label class="button secondary restore-label">恢复备份<input id="restore-input" type="file" accept="application/json,.json"></label><button class="button secondary" data-action="ics">导出日历 .ics</button></div><p class="helper">备份包含课程、节次和学期。日历用于查看课程，不等于起床闹钟。</p><div class="danger-zone"><button class="text-button danger" data-action="clear">${icon('trash')}清空课表与本应用闹钟</button></div>
+  </section></div>`;
+}
+function periodList(edit=false){
+  if(!periodDraft)periodDraft=structuredClone({...state.settings,periodsByDay:state.settings.periodsByDay??{}});
+  if(periodScope==='common')return periodDraft.periods;
+  if(edit&&!Object.hasOwn(periodDraft.periodsByDay,periodScope))periodDraft.periodsByDay[periodScope]=structuredClone(periodDraft.periods);
+  return periodsForDay(periodDraft,+periodScope);
+}
+function refreshPeriods(){
+  periodActive=Math.max(0,Math.min(periodActive,periodList().length-1));
+  $('#period-editor').innerHTML=periodsEditor(periodDraft,periodScope,periodActive);
+}
+function refreshPeriodPreview(keepSlider=false){
+  const periods=periodList();
+  $('#period-chart').innerHTML=periodChart(periods,periodActive);
+  if(!keepSlider)$('#period-slider-panel').innerHTML=periodSliders(periods,periodActive);
+  $('#period-error').textContent=validatePeriods(periods,periodScope!=='common')[0]??'';
+  if(periodScope!=='common')$('#period-scope-note').textContent=weekdays[+periodScope-1]+'单独设置；保存后应用。节次数是可排课时段数，并非当天实际课程数。';
+}
+function applyWeekSelection(weeks,rule,rewriteText=true,updateBounds=true){
+  const form=$('#course-form'); if(!form)return;
+  form.dataset.weekRule=JSON.stringify(rule);
+  if(rewriteText)form.elements.weeks.value=weeks.length?formatWeeks(weeks).replace('周',''):'';
+  if(updateBounds){$('#week-start').value=rule.start;$('#week-end').value=rule.end;}
+  form.querySelectorAll('[data-week]').forEach(button=>button.setAttribute('aria-pressed',String(weeks.includes(+button.dataset.week))));
+  form.querySelectorAll('[data-week-pattern]').forEach(button=>button.setAttribute('aria-pressed',String(rule.pattern===button.dataset.weekPattern)));
+  $('#week-summary').textContent=weekSummary(weeks,state.settings,+form.elements.day.value);
+}
+function updateWeeksFromRange(pattern){
+  const rule={start:+$('#week-start').value,end:+$('#week-end').value,pattern:pattern??JSON.parse($('#course-form').dataset.weekRule).pattern};
+  if(rule.pattern==='custom')rule.pattern='all';
+  applyWeekSelection(weeksForRule(rule,state.settings.totalWeeks),rule,true,false);
+}
+function refreshCourseTiming(range){
+  const form=$('#course-form'), day=+form.elements.day.value, mode=form.elements.timeMode.value;
+  const previous=range??{start:+form.elements.periodStart?.value||1,end:+form.elements.periodEnd?.value||1};
+  $('#course-period-controls').innerHTML=coursePeriodControls(state.settings,day,previous);
+  $('#course-period-controls').hidden=mode!=='periods';
+  form.querySelectorAll('[data-time-mode]').forEach(button=>button.setAttribute('aria-pressed',String(mode===button.dataset.timeMode)));
+  form.elements.start.readOnly=mode==='periods';form.elements.end.readOnly=mode==='periods';
+  updateCourseTimes();
+}
+function updateCourseTimes(){
+  const form=$('#course-form');if(form.elements.timeMode.value!=='periods')return;
+  const periods=periodsForDay(state.settings,+form.elements.day.value), first=+form.elements.periodStart?.value, last=+form.elements.periodEnd?.value;
+  if(periods[first-1]&&periods[last-1]){form.elements.start.value=periods[first-1].start;form.elements.end.value=periods[last-1].end;}
+}
 function render(){const previousScroll=$('.grid-scroll')?.scrollLeft;root.innerHTML=`<div class="app-shell">${header()}<main>${route==='home'?home():route==='import'?importView():route==='alarms'?alarmsView():settingsView()}</main>${nav()}</div>`;document.documentElement.dataset.platform=platform();const scroll=$('.grid-scroll');if(scroll){if(previousScroll!==undefined)scroll.scrollLeft=previousScroll;else{const day=$('.day-header.today');if(day)scroll.scrollLeft=Math.max(0,day.offsetLeft-scroll.clientWidth/2+day.clientWidth/2);}}}
 
 function openEditor(id=null,review=false){
-  const source=review?importResult?.courses:state.courses;const c=source?.find(c=>c.id===id)??{id:uid(),name:'',location:'',day:dayOfWeek(selected),start:'08:30',end:'10:10',weeks:parseWeeks('',state.settings.totalWeeks),color:'mint',confirmed:false,date:''};
-  const dialog=$('#course-dialog');dialog.innerHTML=`<form id="course-form" data-id="${escape(c.id)}" data-review="${review}" data-existing="${Boolean(id)}"><div class="dialog-heading"><h2 id="course-dialog-title">${id?'校对课程':'添加课程'}</h2><button type="button" class="icon-button" data-action="close-dialog" aria-label="关闭">${icon('close')}</button></div><label>课程名称<input name="name" value="${escape(c.name)}" maxlength="100" required autofocus></label><label>上课地点<input name="location" value="${escape(c.location)}" maxlength="160" placeholder="例如：信息楼 502"></label><div class="form-pair"><label>星期<select name="day">${weekdays.map((d,i)=>`<option value="${i+1}" ${c.day===i+1?'selected':''}>${d}</option>`).join('')}</select></label><label>周次<input name="weeks" value="${escape(formatWeeks(c.weeks).replace('周',''))}" placeholder="1-16单 / 2-16双" required></label></div><div class="form-pair"><label>开始时间<input name="start" type="time" value="${c.start}" required></label><label>结束时间<input name="end" type="time" value="${c.end}" required></label></div><label>仅某一天补课（可留空）<input name="date" type="date" value="${escape(c.date??'')}"></label><fieldset class="color-picker"><legend>课程颜色</legend>${['mint','sky','lavender','peach','rose'].map((v,i)=>`<label class="${v}"><input type="radio" name="color" value="${v}" ${c.color===v?'checked':''} aria-label="${['薄荷绿','天空蓝','浅紫','杏色','粉色'][i]}"><span></span></label>`).join('')}</fieldset><label class="confirm-check"><input name="confirmed" type="checkbox" ${c.confirmed?'checked':''}>我已核对星期、周次与时间</label>${c.raw?`<details class="raw-details"><summary>对照识别原文</summary><pre>${escape(c.raw)}</pre></details>`:''}<p id="course-error" class="form-error" role="alert"></p><div class="dialog-actions">${id?`<button type="button" class="text-button danger" data-${review?'remove-review':'delete-course'}="${escape(c.id)}">删除课程</button>`:'<span></span>'}<button class="button" type="submit">保存课程</button></div></form>`;
+  const source=review?importResult?.courses:state.courses;
+  const original=source?.find(c=>c.id===id)??{id:uid(),name:'',location:'',day:dayOfWeek(selected),start:'08:30',end:'10:10',weeks:parseWeeks('',state.settings.totalWeeks),color:'mint',confirmed:!review,date:''};
+  const c=resolveCourseTime(original,state.settings), rule=c.weekRule??inferWeekRule(c.weeks,state.settings.totalWeeks);
+  const dialog=$('#course-dialog');dialog.innerHTML=`<form id="course-form" data-id="${escape(c.id)}" data-review="${review}" data-existing="${Boolean(id)}" data-week-rule="${escape(JSON.stringify(rule))}">
+    <div class="dialog-heading"><h2 id="course-dialog-title">${id?'校对课程':'添加课程'}</h2><button type="button" class="icon-button" data-action="close-dialog" aria-label="关闭">${icon('close')}</button></div>
+    <label>课程名称<input name="name" value="${escape(c.name)}" maxlength="100" required autofocus></label><label>上课地点<input name="location" value="${escape(c.location)}" maxlength="160" placeholder="例如：信息楼 502"></label>
+    <label>星期<select name="day">${weekdays.map((d,i)=>`<option value="${i+1}" ${c.day===i+1?'selected':''}>${d}</option>`).join('')}</select></label>
+    <section class="course-time-section"><h3>上课时间</h3><input type="hidden" name="timeMode" value="${c.periodRange?'periods':'custom'}"><div class="time-mode-buttons" aria-label="时间填写方式"><button type="button" data-time-mode="periods" aria-pressed="${Boolean(c.periodRange)}">按节次选择</button><button type="button" data-time-mode="custom" aria-pressed="${!c.periodRange}">直接填时间</button></div>
+    <div id="course-period-controls" ${c.periodRange?'':'hidden'}>${coursePeriodControls(state.settings,c.day,c.periodRange)}</div>
+    <div class="form-pair actual-course-times"><label>开始时间<input name="start" type="time" value="${c.start}" ${c.periodRange?'readonly':''} required></label><label>结束时间<input name="end" type="time" value="${c.end}" ${c.periodRange?'readonly':''} required></label></div></section>
+    ${weeksEditor(c,state.settings)}
+    <details class="single-date-details" ${c.date?'open':''}><summary>只在某一天上课 / 补课</summary><label>仅某一天补课（可留空）<input name="date" type="date" value="${escape(c.date??'')}"><small>填写后只按这个日期安排，星期与常规周次不再限制这次课程。</small></label></details>
+    <fieldset class="color-picker"><legend>课程颜色</legend>${['mint','sky','lavender','peach','rose'].map((v,i)=>`<label class="${v}"><input type="radio" name="color" value="${v}" ${c.color===v?'checked':''} aria-label="${['薄荷绿','天空蓝','浅紫','杏色','粉色'][i]}"><span></span></label>`).join('')}</fieldset>
+    <label class="confirm-check"><input name="confirmed" type="checkbox" ${c.confirmed?'checked':''}>我已核对星期、周次与时间</label>
+    ${c.raw?`<details class="raw-details"><summary>对照识别原文</summary><pre>${escape(c.raw)}</pre></details>`:''}<p id="course-error" class="form-error" role="alert"></p>
+    <div class="dialog-actions">${id?`<button type="button" class="text-button danger" data-${review?'remove-review':'delete-course'}="${escape(c.id)}">删除课程</button>`:'<span></span>'}<button class="button" type="submit">保存课程</button></div>
+  </form>`;
   dialog.showModal();dialog.querySelector('[name=name]').focus();
 }
 async function processFile(file){if(!file||importBusy)return;route='import';importBusy=true;progress='正在准备文件…';render();try{const doc=await importDocument(file,text=>{progress=text;const strong=$('.dropzone strong');if(strong)strong.textContent=text;});importResult={...parseTimetable(doc,state.settings),name:doc.name,kind:doc.kind};}catch(e){toast(e.message);}finally{importBusy=false;render();}}
@@ -96,10 +187,15 @@ document.addEventListener('click',async event=>{
   if(b.dataset.removeReview){importResult.courses=importResult.courses.filter(c=>c.id!==b.dataset.removeReview);$('#course-dialog').close();render();return;}
   if(b.dataset.deleteCourse){if(confirm('删除这门课程？对应的起床计划会重新计算。')){state.courses=state.courses.filter(c=>c.id!==b.dataset.deleteCourse);$('#course-dialog').close();save();}return;}
   if(b.dataset.deleteException!==undefined){state.exceptions.splice(+b.dataset.deleteException,1);save();return;}
+  if(b.dataset.weekPattern){updateWeeksFromRange(b.dataset.weekPattern);return;}
+  if(b.dataset.week){const form=$('#course-form'),weeks=parseWeeks(form.elements.weeks.value,state.settings.totalWeeks),week=+b.dataset.week;const next=weeks.includes(week)?weeks.filter(w=>w!==week):[...weeks,week].sort((a,b)=>a-b);applyWeekSelection(next,{...inferWeekRule(next,state.settings.totalWeeks),pattern:'custom'});return;}
+  if(b.dataset.timeMode){$('#course-form').elements.timeMode.value=b.dataset.timeMode;refreshCourseTiming();return;}
+  if(b.dataset.periodActive!==undefined){periodActive=+b.dataset.periodActive;refreshPeriodPreview();$('#period-slider-panel').scrollIntoView({block:'nearest',behavior:'smooth'});return;}
+  if(b.dataset.periodCount){const count=periodList().length+(+b.dataset.periodCount);if(count<(periodScope==='common'?1:0)||count>20)return;const periods=resizePeriods(periodList(),count);if(periodScope==='common')periodDraft.periods=periods;else periodDraft.periodsByDay[periodScope]=periods;refreshPeriods();return;}
   switch(b.dataset.action){
     case'import':route='import';render();break;
-    case'demo':state=makeDemo();save();break;
-    case'new':state=createState();selected=dateParts().date;save();break;
+    case'demo':state=makeDemo();periodDraft=null;save();break;
+    case'new':state=createState();periodDraft=null;selected=dateParts().date;save();break;
     case'add':openEditor();break;
     case'add-import':openEditor(null,true);break;
     case'close-dialog':$('#course-dialog').close();break;
@@ -112,30 +208,53 @@ document.addEventListener('click',async event=>{
     case'backup':download(`晨课备份-${dateParts().date}.json`,JSON.stringify(state,null,2));break;
     case'export-alarms':download('晨课起床计划.json',JSON.stringify({version:1,generatedAt:new Date().toISOString(),plans:planAlarms({...state,demo:false,settings:{...state.settings,enabled:true}})},null,2));break;
     case'ics':download('晨课课程.ics',icsExport(state,state.settings.week1,state.settings.totalWeeks*7),'text/calendar');break;
-    case'clear':if(confirm('将清空所有课程和设置，并取消本应用安排的闹钟。建议先导出备份。')){state=createState();save();toast('课表已清空');}break;
-    case'sync':await sync(true);render();break;
-    case'test-alarm':if(platform()==='web'){toast('网页预览不能设置系统闹钟，请在原生版测试');}else{try{const r=await callNative('testAlarm');toast(r.message);}catch(e){toast(e.message);}}break;
+    case'clear':if(confirm('将清空所有课程和设置，并取消本应用安排的闹钟。建议先导出备份。')){state=createState();periodDraft=null;save();toast('课表已清空');}break;
+    case'period-inherit':delete periodDraft.periodsByDay[periodScope];refreshPeriods();break;
+    case'sync':try{if(platform()==='android'){const c=await callNative('requestPermissions');if(!c.exactAllowed||!c.notificationsAllowed){toast(c.message);break;}}await sync(true);render();}catch(e){toast(e.message);}break;
+    case'test-alarm':if(platform()==='web'){toast('网页预览不能设置系统闹钟，请在原生版测试');}else{try{if(platform()==='android'){const c=await callNative('requestPermissions');if(!c.exactAllowed||!c.notificationsAllowed){toast(c.message);break;}}const r=await callNative('testAlarm');toast(r.message);}catch(e){toast(e.message);}}break;
   }
 });
-document.addEventListener('input',event=>{if(event.target.id==='lead-slider'){const value=+event.target.value;$('#lead-value').textContent=value;$('#lead-input').value=value;}});
+document.addEventListener('input',event=>{
+  const el=event.target;
+  if(el.id==='lead-slider'){const value=+el.value;$('#lead-value').textContent=value;$('#lead-input').value=value;}
+  if(el.closest('#settings-form')&&['week1','totalWeeks'].includes(el.name))$('#semester-preview').textContent=semesterPreview();
+  if(el.dataset.periodIndex!==undefined){const periods=periodList(true);periods[+el.dataset.periodIndex][el.dataset.periodPart]=el.value;periodActive=+el.dataset.periodIndex;refreshPeriodPreview();}
+  if(el.dataset.periodSlider){const part=el.dataset.periodSlider,periods=periodList(true);periods[periodActive][part]=clock(+el.value);$('#period-'+part+'-output').textContent=clock(+el.value);const input=$('#periods-form [name="p'+periodActive+(part==='start'?'s':'e')+'"]');if(input)input.value=clock(+el.value);refreshPeriodPreview(true);}
+});
 document.addEventListener('change',async event=>{
   const el=event.target;
+  if(el.id==='view-week'){const week=+el.value;selected=week?addDays(state.settings.week1,(week-1)*7+dayOfWeek(selected)-1):dateParts().date;render();return;}
+  if(el.id==='period-scope'){periodScope=el.value;periodActive=0;refreshPeriods();return;}
+  if(el.id==='period-count'){const count=+el.value;if(!Number.isInteger(count)||count<(periodScope==='common'?1:0)||count>20){$('#period-error').textContent='通用表1-20节，单独设置的星期0-20节。';return;}const periods=resizePeriods(periodList(),count);if(periodScope==='common')periodDraft.periods=periods;else periodDraft.periodsByDay[periodScope]=periods;refreshPeriods();return;}
+  if(el.id==='week-start'||el.id==='week-end'){updateWeeksFromRange();return;}
+  if(el.closest('#course-form')){
+    const form=$('#course-form');
+    if(el.name==='weeks'){const weeks=parseWeeks(el.value,state.settings.totalWeeks);applyWeekSelection(weeks,inferWeekRule(weeks,state.settings.totalWeeks),false);}
+    if(el.name==='day'){refreshCourseTiming();$('#week-summary').textContent=weekSummary(parseWeeks(form.elements.weeks.value,state.settings.totalWeeks),state.settings,+el.value);}
+    if(el.name==='periodStart'||el.name==='periodEnd'){if(+form.elements.periodEnd.value<+form.elements.periodStart.value){if(el.name==='periodStart')form.elements.periodEnd.value=el.value;else form.elements.periodStart.value=el.value;}updateCourseTimes();}
+    if(el.name==='date')form.elements.weeks.required=!el.value;
+  }
   if(el.id==='file-input')processFile(el.files[0]);
   if(el.id==='alarm-enabled'){state.settings.enabled=el.checked;save();}
   if(el.id==='lead-slider'||el.id==='lead-input'){const n=+el.value;if(!Number.isInteger(n)||n<0||n>1440){toast('提前量请输入 0-1440 分钟');return;}state.settings.leadMinutes=n;save();}
-  if(el.id==='restore-input'&&el.files[0]){try{if(el.files[0].size>5*1024*1024)throw Error('备份文件超过 5 MB');const next=validateState(JSON.parse(await el.files[0].text()));if(confirm('用备份替换当前课表？请先保存现有记录。')){state=next;state.settings.enabled=false;save();toast('备份已恢复，请检查后重新启用闹钟');}}catch(e){toast(`恢复失败：${e.message}`);}}
+  if(el.id==='restore-input'&&el.files[0]){try{if(el.files[0].size>5*1024*1024)throw Error('备份文件超过 5 MB');const next=validateState(JSON.parse(await el.files[0].text()));if(confirm('用备份替换当前课表？请先保存现有记录。')){state=next;periodDraft=null;state.settings.enabled=false;save();toast('备份已恢复，请检查后重新启用闹钟');}}catch(e){toast(`恢复失败：${e.message}`);}}
 });
 document.addEventListener('submit',event=>{
   event.preventDefault();const form=event.target;const d=Object.fromEntries(new FormData(form));
   if(form.id==='course-form'){
     const review=form.dataset.review==='true';const source=review?importResult?.courses:state.courses;const old=source?.find(c=>c.id===form.dataset.id)??{};
-    const c={...old,id:form.dataset.id,name:d.name.trim(),location:d.location.trim(),day:+d.day,start:d.start,end:d.end,weeks:parseWeeks(d.weeks,state.settings.totalWeeks),color:d.color??'mint',confirmed:Boolean(d.confirmed),date:d.date||undefined};const errors=validateCourse(c);if(errors.length){$('#course-error').textContent=errors.join('；');return;}
-    if(!review&&state.demo){state=createState();}
+    const weeks=d.date?([weekNumber(d.date,state.settings.week1)].filter(w=>w>=1&&w<=60).length?[weekNumber(d.date,state.settings.week1)]:[1]):parseWeeks(d.weeks,state.settings.totalWeeks);
+    let weekRule=JSON.parse(form.dataset.weekRule);if(d.date)weekRule=undefined;else if(weekRule.pattern!=='custom'&&JSON.stringify(weeksForRule(weekRule))!==JSON.stringify(weeks))weekRule=inferWeekRule(weeks,state.settings.totalWeeks);
+    let c={...old,id:form.dataset.id,name:d.name.trim(),location:d.location.trim(),day:+d.day,start:d.start,end:d.end,weeks,weekRule,color:d.color??'mint',confirmed:Boolean(d.confirmed),date:d.date||undefined,source:old.source??'manual',periodRange:d.timeMode==='periods'?{start:+d.periodStart,end:+d.periodEnd}:undefined};
+    const errors=validateCourse(c);if(!d.date&&weeks.some(w=>w>state.settings.totalWeeks))errors.push('选择的周次超出学期，请先调整学期周数或课程周次');
+    if(c.periodRange&&c.periodRange.end>periodsForDay(state.settings,c.day).length)errors.push('该星期没有所选节次，请先设置节次或直接填写时间');
+    if(errors.length){$('#course-error').textContent=errors.join('；');return;}c=resolveCourseTime(c,state.settings);
+    if(!review&&state.demo){state={...state,courses:[],exceptions:[],demo:false};}
     const list=review?importResult.courses:state.courses;const i=list.findIndex(a=>a.id===c.id);if(i<0)list.push(c);else list[i]=c;
     $('#course-dialog').close();if(review)render();else{save();if(conflicts(state.courses).some(p=>p.includes(c.id)))toast('课程已保存，但有时间重叠，请核对周次和时间');}return;
   }
-  if(form.id==='settings-form'){if(dayOfWeek(d.week1)!==1){toast('第 1 周起点请选择星期一');return;}const candidate=structuredClone(state);candidate.settings={...candidate.settings,week1:d.week1,totalWeeks:+d.totalWeeks,morningEnd:d.morningEnd};try{validateState(candidate);state=candidate;save();toast('学期设置已保存');}catch(e){toast(e.message);}return;}
-  if(form.id==='periods-form'){const periods=state.settings.periods.map((p,i)=>({start:d[`p${i}s`],end:d[`p${i}e`]}));if(periods.some(p=>!Number.isFinite(minutes(p.start))||minutes(p.end)<=minutes(p.start))){toast('请检查节次起止时间');return;}state.settings.periods=periods;save();toast('节次表已保存，现有课程时间保留；重新导入时使用新节次');return;}
+  if(form.id==='settings-form'){const candidate=structuredClone(state);candidate.settings={...candidate.settings,week1:mondayOf(d.week1),semesterStart:d.week1,totalWeeks:+d.totalWeeks,morningEnd:d.morningEnd};try{validateState(candidate);state=candidate;save();toast('学期设置已保存，课程与起床计划已重新计算');}catch(e){toast(e.message);}return;}
+  if(form.id==='periods-form'){const candidate=structuredClone(state);candidate.settings.periods=structuredClone(periodDraft.periods);candidate.settings.periodsByDay=structuredClone(periodDraft.periodsByDay);try{const next=validateState(candidate);next.courses=next.courses.map(c=>resolveCourseTime(c,next.settings));state=next;periodDraft=null;save();toast('节次已保存，按节次录入的课程与起床计划已更新');}catch(e){$('#period-error').textContent=e.message;}return;}
   if(form.id==='exception-form'){state.exceptions=state.exceptions.filter(e=>e.date!==d.date||e.type==='cancelCourse');state.exceptions.push({date:d.date,type:d.type,day:+d.day,note:d.note});state.exceptions.sort((a,b)=>a.date.localeCompare(b.date));save();toast('例外日期已保存');}
 });
 document.addEventListener('dragover',event=>{if(event.target.closest('.dropzone'))event.preventDefault();});
@@ -154,4 +273,4 @@ globalThis.chenkeNativeResume=()=>{
   if(nativeInitialized&&platform()!=='web')sync(true);
 };
 if(platform()!=='web')globalThis.chenkeNativeReady();else{capabilities().then(c=>nativeCaps=c);sync();}
-if('serviceWorker'in navigator&&/^https?:$/.test(location.protocol)&&!import.meta.env.DEV)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+if(platform()==='web'&&'serviceWorker'in navigator&&/^https?:$/.test(location.protocol)&&!import.meta.env.DEV)navigator.serviceWorker.register('./sw.js').catch(()=>{});

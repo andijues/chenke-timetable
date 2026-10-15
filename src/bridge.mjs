@@ -5,14 +5,14 @@ globalThis.chenkeNativeResult = result => {
   const p=pending.get(result.id);if(!p)return;pending.delete(result.id);clearTimeout(p.timer);
   result.error?p.reject(Error(result.error)):p.resolve(result.data);
 };
-export function platform() {return globalThis.__chenkePlatform??(globalThis.webkit?.messageHandlers?.chenke?'ios':globalThis.HarmonyBridge?'harmony':'web');}
+export function platform() {return globalThis.__chenkePlatform??(globalThis.webkit?.messageHandlers?.chenke?'ios':globalThis.HarmonyBridge?'harmony':globalThis.AndroidBridge?'android':'web');}
 export function callNative(action,payload={}) {
   if(platform()==='web') return Promise.reject(Error('当前是网页预览，不能直接设置手机系统闹钟'));
   const id=uid();
   return new Promise((resolve,reject)=>{
     const timer=setTimeout(()=>{pending.delete(id);reject(Error('设备操作尚未完成，请返回应用检查权限并重试'));},60000);
     pending.set(id,{resolve,reject,timer});
-    try {const message={id,action,payload};if(globalThis.webkit?.messageHandlers?.chenke)globalThis.webkit.messageHandlers.chenke.postMessage(message);else globalThis.HarmonyBridge.postMessage(JSON.stringify(message));}catch(e){pending.delete(id);clearTimeout(timer);reject(e);}
+    try {const message={id,action,payload};if(globalThis.webkit?.messageHandlers?.chenke)globalThis.webkit.messageHandlers.chenke.postMessage(message);else (globalThis.HarmonyBridge??globalThis.AndroidBridge).postMessage(JSON.stringify(message));}catch(e){pending.delete(id);clearTimeout(timer);reject(e);}
   });
 }
 export async function capabilities() {

@@ -26,17 +26,40 @@ export function dayOfWeek(value) { return (new Date(`${value}T12:00:00Z`).getUTC
 export function mondayOf(value) { return addDays(value, 1 - dayOfWeek(value)); }
 export function weekNumber(value, week1) { return Math.floor((Date.parse(`${value}T12:00:00Z`) - Date.parse(`${week1}T12:00:00Z`)) / 604800000) + 1; }
 export function parseWeeks(text, max = 18) {
-  const s = String(text ?? '').trim().replace(/[（(]/g, '[').replace(/[）)]/g, ']').replace(/[～~—–至]/g, '-').replace(/[，、；;]/g, ',');
-  if (!s || /每周|全周|全部/.test(s)) return Array.from({length: max}, (_, i) => i + 1);
+  const s = String(text ?? '').trim().replace(/[（(]/g, '[').replace(/[）)]/g, ']').replace(/[～~—–至到]/g, '-').replace(/[，、；;]/g, ',').replace(/第|周次?/g, '');
+  if (!s || /^(?:每|全|全部)$/.test(s)) return Array.from({length: max}, (_, i) => i + 1);
   const odd = /单/.test(s), even = /双/.test(s);
+  if (odd && even) return [];
   const nums = new Set();
+  let hasNumbers = false;
   for (const match of s.matchAll(/(\d+)\s*(?:-\s*(\d+))?/g)) {
+    hasNumbers = true;
     const start = +match[1], end = +(match[2] ?? match[1]);
-    if (start < 1 || end > 60 || end < start) continue;
+    if (start < 1 || end > 60 || end < start) return [];
     for (let i = start; i <= end; i++) if ((!odd || i % 2) && (!even || i % 2 === 0)) nums.add(i);
   }
-  if (!nums.size && (odd || even)) for (let i = 1; i <= max; i++) if ((odd && i % 2) || (even && i % 2 === 0)) nums.add(i);
+  if (!hasNumbers && (odd || even)) for (let i = 1; i <= max; i++) if ((odd && i % 2) || (even && i % 2 === 0)) nums.add(i);
   return [...nums].sort((a, b) => a - b);
+}
+export function weeksForRule({start, end, pattern = 'all'}, max = 60) {
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start || end > max || !['all', 'odd', 'even'].includes(pattern)) return [];
+  return Array.from({length: end - start + 1}, (_, i) => i + start).filter(w => pattern === 'all' || (pattern === 'odd' ? w % 2 === 1 : w % 2 === 0));
+}
+export function periodsForDay(settings, day) { return settings.periodsByDay?.[String(day)] ?? settings.periods; }
+export function validatePeriods(periods, allowEmpty = false) {
+  if (!Array.isArray(periods) || periods.length < (allowEmpty ? 0 : 1) || periods.length > 20) return ['每天节次应在 0-20 节之间，通用表至少保留 1 节'];
+  const errors = [];
+  periods.forEach((p, i) => {
+    if (!p || !Number.isFinite(minutes(p.start)) || !Number.isFinite(minutes(p.end)) || minutes(p.end) <= minutes(p.start)) errors.push(`第 ${i + 1} 节的结束时间应晚于开始时间`);
+    else if (i && minutes(p.start) < minutes(periods[i - 1]?.end)) errors.push(`第 ${i + 1} 节与上一节重叠，请调整时间`);
+  });
+  return errors;
+}
+export function resolveCourseTime(course, settings) {
+  if (!course.periodRange) return course;
+  const periods = periodsForDay(settings, course.day), {start, end} = course.periodRange;
+  if (!periods?.[start - 1] || !periods?.[end - 1]) return course;
+  return {...course, start: periods[start - 1].start, end: periods[end - 1].end};
 }
 export function formatWeeks(weeks) {
   if (!weeks?.length) return '未指定周次';
@@ -45,7 +68,7 @@ export function formatWeeks(weeks) {
   return `${chunks.join(',')}周`;
 }
 export function createState(today = dateParts().date) {
-  return {version: SCHEMA_VERSION, courses: [], exceptions: [], settings: {week1: mondayOf(today), totalWeeks: 18, leadMinutes: 90, morningEnd: '12:00', enabled: false, timezone: ZONE, periods: defaultPeriods.map(([start, end]) => ({start, end}))}, modifiedAt: new Date().toISOString(), demo: false};
+  return {version: SCHEMA_VERSION, courses: [], exceptions: [], settings: {week1: mondayOf(today), totalWeeks: 18, leadMinutes: 90, morningEnd: '12:00', enabled: false, timezone: ZONE, periods: defaultPeriods.map(([start, end]) => ({start, end})), periodsByDay: {}}, modifiedAt: new Date().toISOString(), demo: false};
 }
 export function validateCourse(c) {
   const errors = [];
@@ -54,6 +77,9 @@ export function validateCourse(c) {
   if (!Number.isFinite(minutes(c.start)) || !Number.isFinite(minutes(c.end)) || minutes(c.end) <= minutes(c.start)) errors.push('结束时间应晚于开始时间');
   if (!Array.isArray(c.weeks) || !c.weeks.length || c.weeks.some(w => !Number.isInteger(w) || w < 1 || w > 60)) errors.push('请填写有效周次，例如 1-16 或 1-16单');
   if (c.date && !validDate(c.date)) errors.push('补课日期无效');
+  if (c.periodRange && (!Number.isInteger(c.periodRange.start) || !Number.isInteger(c.periodRange.end) || c.periodRange.start < 1 || c.periodRange.end < c.periodRange.start || c.periodRange.end > 20)) errors.push('请选择有效的起止节次');
+  if (c.weekRule && (!Number.isInteger(c.weekRule.start) || !Number.isInteger(c.weekRule.end) || c.weekRule.start < 1 || c.weekRule.end < c.weekRule.start || c.weekRule.end > 60 || !['all', 'odd', 'even', 'custom'].includes(c.weekRule.pattern))) errors.push('周次范围不正确');
+  if (c.weekRule && c.weekRule.pattern !== 'custom' && JSON.stringify([...new Set(c.weeks ?? [])].sort((a,b)=>a-b)) !== JSON.stringify(weeksForRule(c.weekRule))) errors.push('周次选择与单双周规则不一致');
   if (c.name?.length > 100 || c.location?.length > 160) errors.push('课程名称或地点过长');
   return errors;
 }
@@ -63,12 +89,18 @@ export function validateState(raw) {
   const s = raw.settings;
   if (!validDate(s.week1) || dayOfWeek(s.week1) !== 1) throw Error('第 1 周起点必须是星期一');
   if (!Number.isInteger(s.totalWeeks) || s.totalWeeks < 1 || s.totalWeeks > 60) throw Error('学期周数应在 1-60 之间');
+  if (s.semesterStart && (!validDate(s.semesterStart) || mondayOf(s.semesterStart) !== s.week1)) throw Error('开学日期必须属于第 1 周');
   if (!Number.isInteger(s.leadMinutes) || s.leadMinutes < 0 || s.leadMinutes > 1440 || !Number.isFinite(minutes(s.morningEnd))) throw Error('起床规则不正确');
   if (s.timezone !== ZONE || typeof s.enabled !== 'boolean') throw Error('当前版本仅支持中国标准时间，闹钟开关应为布尔值');
-  if (!Array.isArray(s.periods) || s.periods.length < 1 || s.periods.length > 20 || s.periods.some(p => !Number.isFinite(minutes(p.start)) || minutes(p.end) <= minutes(p.start))) throw Error('节次时间不正确');
+  const periodErrors = validatePeriods(s.periods); if (periodErrors.length) throw Error(periodErrors[0]);
+  if (s.periodsByDay !== undefined) {
+    if (!s.periodsByDay || typeof s.periodsByDay !== 'object' || Array.isArray(s.periodsByDay)) throw Error('每日节次格式不正确');
+    for (const [day, periods] of Object.entries(s.periodsByDay)) if (!/^[1-7]$/.test(day) || validatePeriods(periods, true).length) throw Error('每日节次时间不正确');
+  }
   const ids = new Set();
   for (const c of raw.courses) {
     if (validateCourse(c).length || typeof c.confirmed !== 'boolean' || !c.id || ids.has(c.id)) throw Error('备份含有无效或重复课程');
+    if (c.periodRange && c.periodRange.end > periodsForDay(s, c.day).length) throw Error(`${c.name} 使用第 ${c.periodRange.end} 节，请先保留该节次或修改课程`);
     ids.add(c.id);
   }
   for (const e of raw.exceptions) if (!validDate(e.date) || !['skip', 'replaceDay', 'cancelCourse'].includes(e.type) || (e.type === 'replaceDay' && (!Number.isInteger(e.day) || e.day < 1 || e.day > 7))) throw Error('例外日期格式不正确');
@@ -83,8 +115,8 @@ export function coursesOn(state, date, {confirmedOnly = false} = {}) {
     if (confirmedOnly && !c.confirmed) return false;
     if (exception.some(e => e.type === 'cancelCourse' && e.courseId === c.id)) return false;
     if (c.date) return c.date === date;
-    return week >= 1 && week <= state.settings.totalWeeks && c.day === day && c.weeks.includes(week);
-  }).sort((a, b) => minutes(a.start) - minutes(b.start) || a.name.localeCompare(b.name, 'zh'));
+    return date >= (state.settings.semesterStart ?? state.settings.week1) && week >= 1 && week <= state.settings.totalWeeks && c.day === day && c.weeks.includes(week);
+  }).map(c => resolveCourseTime(c, state.settings)).sort((a, b) => minutes(a.start) - minutes(b.start) || a.name.localeCompare(b.name, 'zh'));
 }
 export function conflicts(courses) {
   const pairs = [];

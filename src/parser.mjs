@@ -1,4 +1,4 @@
-import {uid, parseWeeks, defaultPeriods, validateCourse, weekdays} from './core.mjs';
+import {uid, parseWeeks, defaultPeriods, validateCourse, weekdays, periodsForDay, weeksForRule} from './core.mjs';
 
 const dayRegex = /(?:星期|周|礼拜)([一二三四五六日天])/;
 const dayChars = '一二三四五六日天';
@@ -8,20 +8,25 @@ function timeRange(text) {
   const m = clean(text).match(/(\d{1,2})\s*:\s*(\d{2})\s*(?:-|至|到)\s*(\d{1,2})\s*:\s*(\d{2})/);
   return m ? [`${m[1].padStart(2,'0')}:${m[2]}`, `${m[3].padStart(2,'0')}:${m[4]}`] : null;
 }
-function periodRange(text, periods) {
-  const m = text.match(/(?:第\s*)?(\d{1,2})\s*(?:[-,，、]\s*(\d{1,2}))?\s*节/);
+function periodNumbers(text) {
+  const m = text.match(/(?:第\s*)?(\d{1,2})\s*(?:[-,，、至到]\s*(?:第\s*)?(\d{1,2}))?\s*节/);
   if (!m) return null;
   const start=+m[1], end=+(m[2]??m[1]);
-  if (start < 1 || end < start || end > periods.length) return null;
-  return [periods[start-1].start, periods[end-1].end];
+  return start>=1&&end>=start&&end<=20?{start,end}:null;
+}
+function periodRange(text, periods) {
+  const range=periodNumbers(text);
+  if(!range||range.end>periods.length)return null;
+  return [periods[range.start-1].start, periods[range.end-1].end];
 }
 export function courseFromText(raw, context = {}, settings = {}) {
   const text = clean(raw); const lines=text.split(/\n|\|/).map(clean).filter(Boolean);
-  const periods=settings.periods??defaultPeriods.map(([start,end])=>({start,end}));
-  const direct=timeRange(text), period=periodRange(text,periods);
-  const time=direct??period??context.time;
   const day=parseDay(text)??context.day;
-  const weekText = text.match(/(?:第\s*)?\d+(?:\s*[-,，、]\s*\d+)*\s*(?:周(?:次)?(?:\s*[（(\[]?[单双][）)\]]?)?|[单双]周)/)?.[0] ?? text.match(/\d+\s*-\s*\d+\s*[单双]/)?.[0];
+  const periods=periodsForDay({...settings,periods:settings.periods??defaultPeriods.map(([start,end])=>({start,end}))},day??1);
+  const direct=timeRange(text), range=direct?null:periodNumbers(text)??context.periodRange;
+  const period=range&&range.end<=periods.length?[periods[range.start-1].start,periods[range.end-1].end]:null;
+  const time=direct??period??(range?undefined:context.time);
+  const weekText = text.match(/(?:第\s*)?\d+\s*周\s*(?:至|到|-)\s*(?:第\s*)?\d+\s*周(?:\s*[（(\[]?[单双][）)\]]?)?/)?.[0] ?? text.match(/(?:第\s*)?\d+(?:\s*[-,，、]\s*\d+)*\s*(?:周(?:次)?(?:\s*[（(\[]?[单双][）)\]]?)?|[单双]周)/)?.[0] ?? text.match(/\d+\s*-\s*\d+\s*[单双]/)?.[0];
   let name=''; let location='';
   const discard = /^(?:上午|下午|晚上|午休|时间|节次|课程|学期|星期|周[一二三四五六日]|\d+\s*[-,]\s*\d+\s*节|\d{1,2}\s*:\s*\d{2})/;
   const candidates=lines.map(s=>s.replace(dayRegex,'').replace(/\d{1,2}\s*:\s*\d{2}\s*(?:-|至|到)\s*\d{1,2}\s*:\s*\d{2}/,'').replace(/(?:第\s*)?\d+(?:\s*[-,，、]\s*\d+)*\s*节/,'').replace(weekText??/\u0000/,'').trim()).filter(s=>s&&!discard.test(s)&&!/^\d+[ -]*\d*\s*(?:周|[单双])?$/.test(s));
@@ -38,6 +43,13 @@ export function courseFromText(raw, context = {}, settings = {}) {
   if (!day) reasons.push('未找到星期');
   if (!weekText) reasons.push('未找到周次，暂按每周填写');
   const course={id:uid(), name, location, day:day??1, start:time?.[0]??'08:30', end:time?.[1]??'10:10', weeks:parseWeeks(weekText??'',settings.totalWeeks??18), color:'mint', confirmed:false, source:'import', raw:text, reasons};
+  if(period&&range)course.periodRange=range;
+  if(weekText&&course.weeks.length){
+    const numbers=[...weekText.matchAll(/\d+/g)].map(m=>+m[0]);
+    const rule={start:Math.min(...numbers),end:Math.max(...numbers),pattern:/单/.test(weekText)?'odd':/双/.test(weekText)?'even':'all'};
+    if(JSON.stringify(weeksForRule(rule))!==JSON.stringify(course.weeks))rule.pattern='custom';
+    course.weekRule=rule;
+  }
   const errors=validateCourse(course); if (errors.length) course.reasons.push(...errors);
   return course;
 }
@@ -82,7 +94,8 @@ export function parsePositionedPage(page, settings) {
       const match=clean(row.text).match(/\d{1,2}:\d{2}/)?.[0];const next=markers[i+1];
       if (next&&/\d{1,2}:\d{2}/.test(clean(next.text))&&next.y-row.y<60) {t=[match.padStart(5,'0'),clean(next.text).match(/\d{1,2}:\d{2}/)[0].padStart(5,'0')]; i++;}
     }
-    if (t) timed.push({y:row.y,time:t});
+    const range=periodNumbers(row.text);
+    if (t||range) timed.push({y:row.y,time:t,periodRange:range});
   }
   const courses=[];
   for (let col=0;col<head.length;col++) {
@@ -96,7 +109,7 @@ export function parsePositionedPage(page, settings) {
     }
     for (const b of blocks) {
       const nearest=timed.filter(t=>t.y<=b.y+35).at(-1)??timed[0];
-      const c=courseFromText(b.text,{day:h.day,time:nearest?.time},settings);
+      const c=courseFromText(b.text,{day:h.day,time:nearest?.time,periodRange:nearest?.periodRange},settings);
       if (c) {if (!timeRange(b.text)&&!periodRange(b.text,periods)&&nearest)c.reasons.push('时间由表格行位置推断，请核对');if(h.inferred)c.reasons.push('星期由相邻列推断，请核对');courses.push(c);}
     }
   }
