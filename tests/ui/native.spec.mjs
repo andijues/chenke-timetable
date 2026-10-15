@@ -3,6 +3,7 @@ import {createState} from '../../src/core.mjs';
 
 test('Android 自动识别原生桥接，权限不足不误报成功，授权后支持测试和更新',async({page})=>{
   const state=createState('2026-10-14');state.settings.enabled=true;
+  state.settings.androidAlarmMode='app';
   state.courses=[{id:'android-course',name:'安卓晨课',day:4,start:'08:30',end:'10:10',weeks:[1,2,3],confirmed:true,color:'mint'}];
   await page.clock.install({time:new Date('2026-10-14T09:00:00+08:00')});
   await page.addInitScript(state=>{

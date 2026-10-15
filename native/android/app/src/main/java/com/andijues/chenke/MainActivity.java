@@ -278,6 +278,17 @@ public final class MainActivity extends Activity {
                     if (!m.has("id") || !m.has("action")) return;
                     String action = m.getString("action");
                     if ("requestPermissions".equals(action)) { permissionRequest = m; requestNextPermission(); }
+                    else if ("openClockAlarm".equals(action) || "testClockAlarm".equals(action) || "showClockAlarms".equals(action)) {
+                        try {
+                            JSONObject payload=m.optJSONObject("payload");
+                            if(payload==null)payload=new JSONObject();
+                            if(!"showClockAlarms".equals(action))new AlarmStore(MainActivity.this).cancelAllOwned();
+                            SystemClock clock=new SystemClock(MainActivity.this);
+                            JSONObject result="showClockAlarms".equals(action)?clock.show(MainActivity.this)
+                                :clock.open(MainActivity.this,payload.optJSONObject("plan"),"testClockAlarm".equals(action));
+                            reply(m,result,null);
+                        }catch(Exception error){reply(m,null,error.getMessage());}
+                    }
                     else if ("exportFile".equals(action)) beginExport(m);
                     else queue.execute(() -> execute(m));
                 } catch (Exception ignored) {}
@@ -290,14 +301,21 @@ public final class MainActivity extends Activity {
             SharedPreferences storage = getSharedPreferences("chenke", MODE_PRIVATE);
             AlarmStore alarms = new AlarmStore(this); JSONObject data;
             switch (m.getString("action")) {
-                case "capabilities": data = alarms.capabilities(); break;
+                case "capabilities":
+                    data = alarms.capabilities();
+                    JSONObject clockCaps=new SystemClock(this).capabilities();
+                    data.put("clockAvailable",clockCaps.getBoolean("clockAvailable")).put("clockApp",clockCaps.getString("clockApp"));
+                    break;
                 case "loadState":
                     String value = storage.getString("state", "");
                     data = new JSONObject(); if (!value.isEmpty()) data.put("state", new JSONObject(value)); break;
                 case "saveState":
                     if (!storage.edit().putString("state", p.getJSONObject("state").toString()).commit()) throw new Exception("设备保存失败");
                     data = new JSONObject().put("saved", true); break;
-                case "syncAlarms": data = alarms.synchronize(p.getJSONArray("plans")); break;
+                case "syncAlarms":
+                    if("clock".equals(p.optString("mode","app"))){alarms.cancelAllOwned();data=new SystemClock(this).preview(p.getJSONArray("plans"));}
+                    else data = alarms.synchronize(p.getJSONArray("plans"));
+                    break;
                 case "testAlarm": data = alarms.test(); break;
                 default: throw new IllegalArgumentException("不支持的设备操作");
             }

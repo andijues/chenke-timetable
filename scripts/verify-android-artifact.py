@@ -20,7 +20,7 @@ with zipfile.ZipFile(package) as apk:
     assert all(p in names for p in required)
     dex = b''.join(apk.read(p) for p in names if p.startswith('classes') and p.endswith('.dex'))
     assert dex.startswith(b'dex\n')
-    for name in [b'MainActivity',b'AlarmStore',b'AlarmReceiver',b'RestoreReceiver',b'RingService',b'RingActivity',b'AlarmTime',b'BundledPage',b'ResourcePolicy']:
+    for name in [b'MainActivity',b'AlarmStore',b'AlarmReceiver',b'RestoreReceiver',b'RingService',b'RingActivity',b'AlarmTime',b'BundledPage',b'ResourcePolicy',b'ClockTime',b'SystemClock']:
         assert name in dex, name
     assert not any(n.lower().endswith(('.p12','.p7b','.keystore','.jks','.pem','.csr')) for n in names)
     for name in ['app.js','style.css']:
@@ -44,7 +44,7 @@ manifest = subprocess.run([str(tools/'aapt2.exe'),'dump','badging',str(package)]
     check=True,capture_output=True,text=True,encoding='utf-8',errors='replace').stdout
 assert "name='com.andijues.chenke'" in manifest and ("versionName='"+record['version']+"'") in manifest
 assert "minSdkVersion:'26'" in manifest and "targetSdkVersion:'36'" in manifest
-for permission in ['SCHEDULE_EXACT_ALARM','POST_NOTIFICATIONS','RECEIVE_BOOT_COMPLETED','FOREGROUND_SERVICE_MEDIA_PLAYBACK','USE_FULL_SCREEN_INTENT']:
+for permission in ['SCHEDULE_EXACT_ALARM','POST_NOTIFICATIONS','RECEIVE_BOOT_COMPLETED','FOREGROUND_SERVICE_MEDIA_PLAYBACK','USE_FULL_SCREEN_INTENT','com.android.alarm.permission.SET_ALARM']:
     assert permission in manifest, permission
 device_path = root/'reports/android-compatibility-test.json'
 device_evidence = json.loads(device_path.read_text(encoding='utf-8')) if device_path.exists() else {}
@@ -54,6 +54,7 @@ record.update({'zipIntegrity':'passed','officialSignatureVerification':'passed',
     'javaHome':str(java),'deviceInstalled':bool(device_result.get('installed')),
     'homepageVerified':bool(device_result.get('homepageVerified')),
     'lockScreenAlarmTested':bool(device_result.get('lockScreenAlarmTested')),
+    'lockScreenAlarmPassed':bool(device_result.get('lockScreenAlarmPassed')),
     'deviceTestEnvironment':device_evidence.get('testEnvironment') if device_result else None})
 (root/'reports/android-build.json').write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
 (root/'reports/android-apksigner.txt').write_text(verify.stdout,encoding='utf-8')

@@ -92,6 +92,7 @@ export function validateState(raw) {
   if (s.semesterStart && (!validDate(s.semesterStart) || mondayOf(s.semesterStart) !== s.week1)) throw Error('开学日期必须属于第 1 周');
   if (!Number.isInteger(s.leadMinutes) || s.leadMinutes < 0 || s.leadMinutes > 1440 || !Number.isFinite(minutes(s.morningEnd))) throw Error('起床规则不正确');
   if (s.timezone !== ZONE || typeof s.enabled !== 'boolean') throw Error('当前版本仅支持中国标准时间，闹钟开关应为布尔值');
+  if (s.androidAlarmMode !== undefined && !['clock','app'].includes(s.androidAlarmMode)) throw Error('安卓响铃方式无效');
   const periodErrors = validatePeriods(s.periods); if (periodErrors.length) throw Error(periodErrors[0]);
   if (s.periodsByDay !== undefined) {
     if (!s.periodsByDay || typeof s.periodsByDay !== 'object' || Array.isArray(s.periodsByDay)) throw Error('每日节次格式不正确');

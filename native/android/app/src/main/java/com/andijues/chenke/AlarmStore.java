@@ -69,6 +69,14 @@ public final class AlarmStore {
         alarms.setAlarmClock(new AlarmManager.AlarmClockInfo(item.getLong("at"), show), alarmIntent(item.getString("id")));
     }
     private void cancel(String id) { alarms.cancel(alarmIntent(id)); }
+    public void cancelAllOwned() throws Exception {
+        synchronized(LOCK){
+            JSONArray old=ledger();
+            for(int i=0;i<old.length();i++)cancel(old.getJSONObject(i).getString("id"));
+            persist(new JSONArray());
+            context.stopService(new Intent(context,RingService.class));
+        }
+    }
     private JSONObject status(int count) throws Exception {
         return new JSONObject().put("mode", count == 0 ? "idle" : "alarm").put("scheduled", count).put("failed", false)
             .put("message", count == 0 ? "当前没有待响铃计划，本应用旧计划已取消。"

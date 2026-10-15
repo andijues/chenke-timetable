@@ -1740,6 +1740,19 @@ input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=file]),
 .week-calendar button{min-width:44px;min-height:44px;padding:4px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--muted);font-size:15px;font-variant-numeric:tabular-nums;cursor:pointer;}
 .week-calendar button[aria-pressed=true]{background:var(--green);border-color:var(--green);color:var(--surface);font-weight:600;}
 .selection-summary{margin:12px 0;font-size:12px;line-height:1.8;color:var(--green);overflow-wrap:anywhere;}
+.clock-mode-label{display:grid;gap:8px;margin:0 0 24px;font-weight:600;}
+.clock-mode-label select{width:100%;min-height:48px;font-weight:400;}
+.clock-handoff{padding-bottom:24px;margin-bottom:24px;border-bottom:1px solid var(--line);}
+.clock-handoff h2{margin:0;}
+.clock-next{display:flex;align-items:baseline;flex-wrap:wrap;gap:12px;margin:12px 0 8px;}
+.clock-next strong{font-size:38px;font-weight:650;line-height:1.3;color:var(--green);font-variant-numeric:tabular-nums;}
+.clock-next span,.clock-handoff>p{color:var(--muted);line-height:1.75;overflow-wrap:anywhere;}
+.clock-handoff .alarm-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0 8px;}
+.clock-handoff .button,.clock-handoff .text-button{min-height:48px;white-space:normal;line-height:1.5;}
+.clock-handoff .alarm-actions .text-button{grid-column:1/-1;justify-self:start;}
+.clock-handoff .clock-last{color:var(--green);}
+.clock-handoff .clock-feedback{color:var(--green);font-weight:600;}
+.clock-handoff .clock-feedback.error{color:var(--ink);}
 .week-text-label{display:block;font-size:12px;}
 .single-date-details{margin-top:16px;}
 .single-date-details label{display:block;}

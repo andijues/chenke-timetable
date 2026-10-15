@@ -18,8 +18,8 @@ export function callNative(action,payload={}) {
 export async function capabilities() {
   return platform()==='web'?{platform:'web',supported:false,mode:'preview',message:'网页可计算起床时间；系统闹钟需要原生版或 iOS 快捷指令。'}:callNative('capabilities');
 }
-export async function dispatchAlarms(plans) {
+export async function dispatchAlarms(plans,mode='app') {
   if(platform()==='web')return {mode:'preview',scheduled:0,message:'已更新起床预览，尚未设置系统闹钟。'};
-  return callNative('syncAlarms',{plans});
+  return callNative('syncAlarms',{plans,...(platform()==='android'?{mode}:{})});
 }
 export function shortcutURL(plans) {return `shortcuts://run-shortcut?name=${encodeURIComponent('晨课闹钟')}&input=text&text=${encodeURIComponent(JSON.stringify({version:1,generatedAt:new Date().toISOString(),plans}))}`;}

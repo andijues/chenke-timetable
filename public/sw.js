@@ -1,4 +1,4 @@
-const VERSION='chenke-v3-webview-compat-0.2.1';
+const VERSION='chenke-v3-system-clock-0.2.2';
 const SHELL=['./','./index.html','./app.js','./style.css','./icon.svg','./manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(VERSION).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('chenke-')&&k!==VERSION).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
