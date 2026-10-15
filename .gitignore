@@ -3,7 +3,6 @@ node_modules/
 test-results/
 playwright-report/
 *.log
-native/ios/build/
 native/harmony/.hvigor/
 native/harmony/oh_modules/
 native/harmony/build/
@@ -22,7 +21,6 @@ native/android/local.properties
 native/android/app/build/
 native/android/app/src/main/assets/web/
 dist/
-native/ios/Chenke/Web/
 native/harmony/entry/src/main/resources/rawfile/web/
 reports/
 .impeccable/review/
@@ -42,5 +40,4 @@ __pycache__/
 /scripts/github-personal.mjs
 /scripts/debug-import.mjs
 /scripts/debug-ocr.mjs
-/scripts/check-apple-api.mjs
 /scripts/finish-ui.mjs

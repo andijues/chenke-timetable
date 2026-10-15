@@ -1,7 +1,6 @@
 * text=auto
 *.yml text eol=lf
 *.mjs text eol=lf
-*.swift text eol=lf
 *.ets text eol=lf
 *.pdf binary
 *.png binary

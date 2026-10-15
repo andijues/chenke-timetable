@@ -770,7 +770,7 @@ main{
   margin:18px 0;
   color:var(--muted);
   font-size:12px}
-.raw-details summary,.shortcut-help summary{
+.raw-details summary{
   min-height:44px;
   cursor:pointer;
   display:flex;
@@ -778,10 +778,10 @@ main{
   list-style-position:inside;
   text-decoration:underline;
   text-underline-offset:4px}
-.raw-details summary:before,.shortcut-help summary:before{
+.raw-details summary:before{
   content:'+';
   margin-right:9px}
-.raw-details[open] summary:before,.shortcut-help[open] summary:before{
+.raw-details[open] summary:before{
   content:'−'}
 .raw-details pre{
   max-height:260px;
@@ -976,13 +976,6 @@ input[type=range]{
 .alarm-day-time.rest{
   font-size:13px;
   color:var(--muted)}
-.shortcut-help{
-  font-size:12px;
-  line-height:1.9;
-  margin-top:24px;
-  color:var(--muted)}
-.shortcut-help p{
-  margin-bottom:14px}
 .settings-layout{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -1675,7 +1668,7 @@ input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=file]),
   .alarm-day{gap:10px;}
   .settings-form,.exception-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
   .settings-form label,.exception-form label,.form-pair label{min-width:0;}
-  .raw-details summary,.shortcut-help summary{min-height:44px;padding-block:12px;}
+  .raw-details summary{min-height:44px;padding-block:12px;}
   dialog[open]{
     position:fixed;
     top:calc(var(--visual-viewport-top,0px) + env(safe-area-inset-top) + 8px);

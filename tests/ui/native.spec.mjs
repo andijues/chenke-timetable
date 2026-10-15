@@ -60,27 +60,3 @@ test('鸿蒙返回前台重新核对同一计划，并呈现权限撤销与恢�
   await page.evaluate(()=>{window.__testNotificationsEnabled=true;window.chenkeNativeResume();});
   await expect(page.locator('.native-status')).toContainText('系统已接受');
 });
-
-test('iOS 原生桥接发布系统闹钟，编辑提前量会更新同一日期计划',async({page})=>{
-  const state=createState('2026-10-14');state.settings.enabled=true;
-  state.courses=[{id:'ios-morning',name:'晨课测试',day:4,start:'08:30',end:'10:10',weeks:[1,2,3,4,5],color:'mint',confirmed:true}];
-  await page.clock.install({time:new Date('2026-10-14T09:00:00+08:00')});
-  await page.addInitScript(state=>{
-    window.__chenkePlatform='ios';window.__testNativeCalls=[];
-    window.webkit={messageHandlers:{chenke:{postMessage(message){
-      window.__testNativeCalls.push(message);let data={};
-      if(message.action==='loadState')data={state};
-      if(message.action==='capabilities')data={platform:'ios',supported:true};
-      if(message.action==='syncAlarms')data={mode:'alarm',scheduled:message.payload.plans.length,message:'系统已接受起床闹钟'};
-      queueMicrotask(()=>window.chenkeNativeResult({id:message.id,data}));
-    }}}};
-  },state);
-  await page.goto('/');await page.getByRole('button',{name:'闹钟',exact:true}).click();
-  await expect(page.locator('.native-status')).toContainText('系统闹钟已调度');
-  const original=await page.evaluate(()=>window.__testNativeCalls.filter(m=>m.action==='syncAlarms').at(-1).payload.plans);
-  expect(original[0].alarmTime).toBe('07:00');
-  await page.locator('#lead-input').fill('60');await page.locator('#lead-input').press('Tab');
-  await expect(page.locator('.native-status')).toContainText('系统已接受');
-  const changed=await page.evaluate(()=>window.__testNativeCalls.filter(m=>m.action==='syncAlarms').at(-1).payload.plans);
-  expect(changed[0].id).toBe(original[0].id);expect(changed[0].alarmTime).toBe('07:30');
-});

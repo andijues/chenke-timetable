@@ -23,4 +23,4 @@ FORM: 候选顺序：校园学习终端、馆藏索引、公共交通时间图�
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
-Native 校验限制：当前仅 Windows 浏览器预览可运行。截图只证明共享界面，不能证明鸿蒙 HAP/iOS IPA 或系统响铃；分别在真机上验证是交付待办。
+Native 校验限制：当前仅 Windows 浏览器预览可运行。截图只证明共享界面，不能证明鸿蒙 HAP/Android APK 或系统响铃；分别在真机上验证是交付待办。

@@ -7,11 +7,13 @@ root=Path(__file__).resolve().parent.parent
 out=root/'output'
 out.mkdir(exist_ok=True)
 excluded={'node_modules','.git','output','test-results','playwright-report','.vite','.hvigor','.hvigor-cache','.gradle','.tools','oh_modules','build'}
-local_helpers={'github-personal.mjs','debug-import.mjs','debug-ocr.mjs','check-apple-api.mjs','finish-ui.mjs'}
+platforms={'android','harmony'}
+local_helpers={'github-personal.mjs','debug-import.mjs','debug-ocr.mjs','finish-ui.mjs'}
 archive=out/'晨课-完整项目.zip'
 with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
     for p in root.rglob('*'):
         rel=p.relative_to(root)
+        if rel.parts[0]=='native' and len(rel.parts)>1 and rel.parts[1] not in platforms: continue
         if not p.is_file() or p.name=='local.properties' or any(part in excluded for part in rel.parts) or p.suffix in {'.p12','.p7b','.cer','.jks','.keystore','.p7s','.csr','.pem','.mobileprovision','.log','.traineddata','.pyc'} or (rel.parts[0]=='scripts' and p.name in local_helpers): continue
         z.write(p, str(Path('晨课')/rel))
 web=out/'晨课-网页预览.zip'
@@ -19,11 +21,10 @@ with zipfile.ZipFile(web,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
     for p in (root/'dist').rglob('*'):
         if p.is_file(): z.write(p,p.relative_to(root/'dist'))
 manifest=[]
-ipa=out/'晨课-iOS-未签名.ipa'
 hap=out/'晨课-鸿蒙-未签名.hap'
 signed_hap=out/'晨课-鸿蒙-已签名.hap'
 apk=out/'晨课-Android-调试.apk'
-for p in [archive,web]+[p for p in [ipa,hap,signed_hap,apk] if p.exists()]:
+for p in [archive,web]+[p for p in [hap,signed_hap,apk] if p.exists()]:
     digest=hashlib.sha256(p.read_bytes()).hexdigest()
     with zipfile.ZipFile(p) as z:
         assert z.testzip() is None

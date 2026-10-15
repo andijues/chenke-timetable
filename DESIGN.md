@@ -215,7 +215,7 @@ components:
 
 界面以中文阅读和个人校正为中心。手机保留横向课表与固定时间轴，桌面增加今日安排；按钮、输入框、短说明和原文对照形成直接的操作关系。圆角用于界定可操作表面，细网格负责时间参照。
 
-本文件记录共享网页界面，依据 src/main.mjs、public/style.css、index.html 和 .impeccable/review 中的明暗截图。鸿蒙已另行完成编译、签名、安装及主页启动验证；系统提醒仍待开放能力审批和响铃验收。iOS云编译已通过，手机安装及响铃未验证。系统成功状态必须来自原生回执，不能由视觉预览推定。
+本文件记录共享网页界面，依据 src/main.mjs、public/style.css、index.html 和 .impeccable/review 中的明暗截图。鸿蒙已另行完成编译、签名、安装及主页启动验证；系统提醒仍待开放能力审批和响铃验收。系统成功状态必须来自原生回执，不能由视觉预览推定。
 
 **Key Characteristics:**
 
@@ -260,7 +260,7 @@ sidecar 的八步 OKLCH 色阶是按已用颜色生成的色板预览元数据�
 
 **Display Font:** 未另设品牌展示字体；大号时间和提前分钟沿用界面字体。
 
-**Body Font:** frontmatter 中的本机系统字体栈。苹果优先使用系统字体与 PingFang SC，鸿蒙使用可用的 HarmonyOS Sans SC，Windows 回退 Microsoft YaHei；具体命中字体取决于设备。
+**Body Font:** frontmatter 中的本机系统字体栈。手机优先使用可用的 HarmonyOS Sans SC 和本机系统字体，Windows 回退 Microsoft YaHei；具体命中字体取决于设备。
 
 **Label/Mono Font:** 不另载等宽字体；数字通过 `font-variant-numeric: tabular-nums` 对齐。
 
