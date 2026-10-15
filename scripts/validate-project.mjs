@@ -14,6 +14,9 @@ const harmony=await json('reports/harmony-build.json');
 const signed=await json('reports/harmony-signed.json');
 const history=await json('reports/harmony-runtime-0.1.1.json');
 const android=await json('reports/android-build.json');
+const androidTransfer=await json('reports/android-harmony-download.json');
+const currentAndroidTransfer=androidTransfer?.sha256===android?.sha256?androidTransfer:null;
+const packageTransferred=Boolean(currentAndroidTransfer?.requests?.some(r=>r.method==='GET'&&r.start===0&&r.end===android.bytes-1));
 const packageInfo=await json('package.json');
 const compatibility=await json('reports/android-compatibility-test.json');
 const androidDevice=compatibility?.attempts?.find(attempt=>attempt.sha256===android?.sha256)??null;
@@ -24,6 +27,10 @@ const reminderReview=await json('reports/harmony-reminder-review-latest.json');
 const harmonyBridgeTests=await json('reports/harmony-bridge-tests.json');
 const harmonyUIReview=await json('reports/harmony-ui-review.json');
 const harmonyCaptures=await json('reports/harmony-ui-captures.json');
+const timetableImportValidation=await json('reports/timetable-import-validation.json');
+if(timetableImportValidation){
+  for(const source of timetableImportValidation.sourceFiles){if(hash(await readFile(source.path))!==source.sha256)throw Error('课表识别核对记录与当前源码不一致：'+source.path);}
+}
 if(harmonyOnly){
   if(harmony?.build!=='success'||harmonyBridgeTests?.failed!==0||harmonyUIReview?.disposition!=='ship')throw Error('鸿蒙构建、桥接逻辑测试或共享界面审阅记录未通过');
   for(const source of harmonyBridgeTests.sourceFiles){if(hash(await readFile(source.path))!==source.sha256)throw Error('鸿蒙桥接测试记录与当前源码不一致：'+source.path);}
@@ -58,9 +65,9 @@ const summary={
   androidJvmTests:{runThisUpdate:!harmonyOnly,passed:(android?.jvmRuleTests??0)+(android?.jvmStartupTests??0)+(android?.jvmResourceTests??0)+(android?.jvmClockTests??0),alarmTime:android?.jvmRuleTests??0,startupPage:android?.jvmStartupTests??0,resourcePolicy:android?.jvmResourceTests??0,systemClockDates:android?.jvmClockTests??0,scope:'Alarm date validation, bundled HTML startup, local resource handling and safe next-occurrence Clock handoff'},
   uiFunctionalTests:{passed:functional.length,failed:0,cases:functional.map(s=>s.title)},
   uiCaptureTests:{passed:capture.length,failed:0},screenshots:ui.map(n=>'.impeccable/review/'+n+'.png'),
-  designReview:{...(harmonyOnly?harmonyUIReview:clockReview??{disposition:'pending'}),historical:true,currentUpdate:'Platform removal only; previous design review retained as history, not a new visual approval'},
+  designReview:{...(harmonyOnly?harmonyUIReview:clockReview??{disposition:'pending'}),historical:true,currentUpdate:'Timetable import parsing and review metadata; previous design review retained as history, not a new visual approval'},
   harmonyPreviewCaptures:harmonyCaptures,
-  designDocumentation:{incumbentVisualSystemPreserved:true,historical:true,scope:'Previous interface documentation retained; current change removes a platform and its help entry',report:harmonyOnly?'reports/harmony-ui-documentation.md':'reports/clock-ui-documentation.md'},
+  designDocumentation:{incumbentVisualSystemPreserved:true,historical:true,scope:'Previous interface documentation retained; current change improves import parsing and review metadata',report:harmonyOnly?'reports/harmony-ui-documentation.md':'reports/clock-ui-documentation.md'},
   native:{
     harmony:harmony?.build==='success'?`${harmony.version??'unknown'} compiled; current build signed=${Boolean(signed?.signatureVerified&&signed?.unsignedSHA256===harmony.sha256)}; current build not installed or ringing-tested; previous signed package retained separately`:'not compiled',
     android:android?.officialSignatureVerification==='passed'?`${android.version} compiled, lint checked and debug signature/content verified; current APK installed=${Boolean(androidDevice?.installed)}, home confirmed=${Boolean(androidDevice?.homepageVerified)}, ringing tested=${Boolean(androidDevice?.lockScreenAlarmTested)}, ringing passed=${Boolean(androidDevice?.lockScreenAlarmPassed)}`:'not verified',
@@ -69,8 +76,8 @@ const summary={
   androidCompatibility:compatibility,currentAndroidDeviceResult:androidDevice,harmonyReminderReview:reminderReview,
   androidInlineStartup:inlineStartup?.sha256===android?.sha256?inlineStartup:null,
   androidBrowserCompatibility:browserCompatibility?.sha256===android?.sha256?browserCompatibility:null,
-  externalActions:{githubPublished:true,huaweiReminderCapabilityApplied:history?.reminderDiagnostics?.submitted===true,paidServicesEnabled:false,deviceCommandsRunThisUpdate:!localOnly&&Boolean(compatibility),harmonySignatureUpdatedThisUpdate:!localOnly&&signed?.unsignedSHA256===harmony?.sha256},
-  realUserPDFReceived:false,lockScreenAlarmTestedThisUpdate:!localOnly&&Boolean(androidDevice?.lockScreenAlarmTested),lockScreenAlarmPassedThisUpdate:!localOnly&&Boolean(androidDevice?.lockScreenAlarmPassed),files
+  externalActions:{githubPublished:true,huaweiReminderCapabilityApplied:history?.reminderDiagnostics?.submitted===true,paidServicesEnabled:false,deviceCommandsRunThisUpdate:packageTransferred||!localOnly&&Boolean(compatibility),androidPackageTransferredThisUpdate:packageTransferred,harmonySignatureUpdatedThisUpdate:!localOnly&&signed?.unsignedSHA256===harmony?.sha256},
+  timetableImportValidation,realUserPDFReceived:Boolean(timetableImportValidation?.realDocumentsValidated),lockScreenAlarmTestedThisUpdate:!localOnly&&Boolean(androidDevice?.lockScreenAlarmTested),lockScreenAlarmPassedThisUpdate:!localOnly&&Boolean(androidDevice?.lockScreenAlarmPassed),files
 };
 await writeFile('reports/validation.json',JSON.stringify(summary,null,2));
 console.log(harmonyOnly?'鸿蒙验证记录已保存：规则 '+corePassed+' 项，桥接逻辑 '+harmonyBridgeTests.passed+' 项，浏览器功能 '+functional.length+' 项与截图检查 '+capture.length+' 项；鸿蒙不签名、不安装，响铃未实测。':'验证记录已保存：规则 '+corePassed+' 项，浏览器功能 '+functional.length+' 项，截图记录 '+capture.length+' 项，Android JVM '+summary.androidJvmTests.passed+' 项；设备结论按 APK 哈希单独记录。');
