@@ -10,15 +10,24 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
+import android.util.Log;
 import android.webkit.*;
 import android.view.View;
 import android.view.WindowInsets;
 import android.widget.LinearLayout;
+import android.widget.FrameLayout;
+import android.widget.TextView;
+import android.widget.Button;
+import android.widget.ScrollView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.ByteArrayInputStream;
 import java.io.OutputStream;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -37,13 +46,32 @@ public final class MainActivity extends Activity {
     private ValueCallback<Uri[]> fileCallback;
     private JSONObject exportRequest;
     private JSONObject permissionRequest;
+    private FrameLayout container;
+    private ScrollView startupPanel;
+    private TextView startupTitle;
+    private TextView startupDetails;
+    private boolean bootComplete;
+    private String lastStartupError = "";
+    private final Handler startupHandler = new Handler(Looper.getMainLooper());
+    private final Runnable startupTimeout = () -> {
+        if (!bootComplete) showStartupError("页面初始化超过 12 秒。" + (lastStartupError.isEmpty() ? "" : "\n" + lastStartupError));
+    };
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        try { createInterface(); }
+        catch (Throwable error) {
+            if (container == null) { container = new FrameLayout(this); setContentView(container); }
+            if (startupPanel == null) createStartupPanel();
+            showStartupError(error.getClass().getSimpleName() + ": " + error.getMessage());
+        }
+    }
+    private void createInterface() {
+        container = new FrameLayout(this);
+        container.setBackgroundColor(0xfff6f8f7);
+        setContentView(container);
         if (Build.VERSION.SDK_INT >= 33)
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
-        LinearLayout container = new LinearLayout(this);
-        container.setBackgroundColor(0xfff6f8f7);
         // Target 36 edge-to-edge: consume system/IME insets in the native host.
         container.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
@@ -56,7 +84,8 @@ public final class MainActivity extends Activity {
             return Build.VERSION.SDK_INT >= 30 ? WindowInsets.CONSUMED : insets.consumeSystemWindowInsets();
         });
         web = new WebView(this);
-        container.addView(web, new LinearLayout.LayoutParams(-1, -1)); setContentView(container);
+        container.addView(web, new FrameLayout.LayoutParams(-1, -1));
+        createStartupPanel();
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true); settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false); settings.setAllowContentAccess(true);
@@ -64,25 +93,16 @@ public final class MainActivity extends Activity {
         settings.setSupportMultipleWindows(false);
         web.addJavascriptInterface(new NativeBridge(), "AndroidBridge");
         web.setWebViewClient(new WebViewClient() {
+            // Some compatible WebViews dispatch only the original String overload.
+            @Override public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+                return localResource(Uri.parse(url));
+            }
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                Uri uri = request.getUrl(); String path = uri.getPath();
-                if (!own(uri) || path == null || !path.startsWith("/v3/") || path.contains("..") || path.contains("\\"))
-                    return response(403, "Forbidden", new ByteArrayInputStream(new byte[0]), "text/plain");
-                String relative = path.substring(4);
-                try { return response(200, "OK", getAssets().open("web/" + relative), mime(relative)); }
-                catch (Exception e) {
-                    // AAPT expands .gz assets and strips the suffix. Tesseract accepts raw
-                    // traineddata too (it detects gzip by magic bytes, not the requested URL).
-                    if (relative.endsWith(".traineddata.gz")) {
-                        try { return response(200, "OK", getAssets().open("web/" + relative.substring(0, relative.length() - 3)), "application/octet-stream"); }
-                        catch (Exception ignored) {}
-                    }
-                    return response(404, "Not Found", new ByteArrayInputStream(new byte[0]), "text/plain");
-                }
+                return localResource(request.getUrl());
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                if (own(uri) && uri.getPath() != null && uri.getPath().startsWith("/v3/")) return false;
+                if (own(uri) || ResourcePolicy.engineResource(uri.getScheme())) return false;
                 if (request.isForMainFrame() && ("https".equals(uri.getScheme()) || "http".equals(uri.getScheme()))) {
                     try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); } catch (Exception ignored) {}
                 }
@@ -91,13 +111,22 @@ public final class MainActivity extends Activity {
             @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) { pageReady = false; }
             @Override public void onPageFinished(WebView view, String url) {
                 if (own(Uri.parse(url))) {
-                    pageReady = true;
-                    for (String reply : replies) script(reply);
-                    replies.clear(); script("window.chenkeNativeReady?.()");
+                    finishPageInitialization();
                 }
+            }
+            @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (!bootComplete && request.isForMainFrame()) showStartupError("页面加载失败：" + error.getErrorCode() + " " + error.getDescription() + "\n地址：" + diagnosticUrl(request.getUrl()));
+            }
+            @Override public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse error) {
+                if (!bootComplete && request.isForMainFrame()) showStartupError("页面资源加载失败：" + error.getStatusCode() + "\n地址：" + diagnosticUrl(request.getUrl()));
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onConsoleMessage(ConsoleMessage message) {
+                if (!bootComplete && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR)
+                    showStartupError(message.message() + " (line " + message.lineNumber() + ")");
+                return true;
+            }
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
                 fileCallback = callback;
@@ -116,12 +145,100 @@ public final class MainActivity extends Activity {
                     .setPositiveButton("知道了", (d, w) -> result.confirm()).setOnCancelListener(d -> result.confirm()).show(); return true;
             }
         });
-        web.loadUrl(ENTRY);
+        loadBundledPage();
     }
-    private static boolean own(Uri uri) { return "https".equals(uri.getScheme()) && "chenke.local".equals(uri.getHost()) && uri.getPort() == -1; }
+    private WebResourceResponse localResource(Uri uri) {
+        // Return null so WebView handles its own document/blob machinery. In compatible
+        // engines these requests can also reach the legacy interception callback.
+        if (ResourcePolicy.engineResource(uri.getScheme())) return null;
+        if (!own(uri))
+            return response(403, "Forbidden", new ByteArrayInputStream(new byte[0]), "text/plain");
+        final String relative;
+        try { relative = ResourcePolicy.assetPath(uri.getPath()); }
+        catch (IllegalArgumentException error) { return response(403, "Forbidden", new ByteArrayInputStream(new byte[0]), "text/plain"); }
+        try { return response(200, "OK", getAssets().open("web/" + relative), mime(relative)); }
+        catch (Exception error) {
+            // AAPT expands gzip assets. Tesseract detects raw traineddata by its bytes.
+            if (relative.endsWith(".traineddata.gz")) {
+                try { return response(200, "OK", getAssets().open("web/" + relative.substring(0, relative.length() - 3)), "application/octet-stream"); }
+                catch (Exception ignored) {}
+            }
+            return response(404, "Not Found", new ByteArrayInputStream(new byte[0]), "text/plain");
+        }
+    }
+    private String assetText(String name) throws Exception {
+        try (InputStream input = getAssets().open("web/" + name); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192]; int count;
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            return new String(output.toByteArray(), StandardCharsets.UTF_8);
+        }
+    }
+    private void loadBundledPage() {
+        bootComplete = false; pageReady = false; lastStartupError = "";
+        startupPanel.setVisibility(View.VISIBLE); startupTitle.setText("正在打开晨课…"); startupDetails.setText("");
+        startupHandler.removeCallbacks(startupTimeout); startupHandler.postDelayed(startupTimeout, 12_000L);
+        try {
+            // Supply the initial document, CSS and entry script directly. Home startup must
+            // not depend on a DNS lookup or a compatible WebView's resource interception.
+            String html = BundledPage.create(assetText("index.html"), assetText("style.css"), assetText("app.js"));
+            web.loadDataWithBaseURL(ENTRY, html, "text/html", "UTF-8", ENTRY);
+        } catch (Exception error) { showStartupError("读取本机界面失败：" + error.getMessage()); }
+    }
+    private void finishPageInitialization() {
+        pageReady = true;
+        for (String reply : replies) script(reply);
+        replies.clear(); script("window.chenkeNativeReady && window.chenkeNativeReady()");
+        checkStartup();
+    }
+    private void checkStartup() {
+        if (web == null) return;
+        web.evaluateJavascript("Boolean(document.getElementById('app') && document.getElementById('app').children.length)", result -> {
+            if ("true".equals(result)) {
+                bootComplete = true; startupHandler.removeCallbacks(startupTimeout); startupPanel.setVisibility(View.GONE);
+            } else if (!lastStartupError.isEmpty()) showStartupError(lastStartupError);
+        });
+    }
+    private void createStartupPanel() {
+        startupPanel = new ScrollView(this); startupPanel.setFillViewport(true); startupPanel.setBackgroundColor(0xfff6f8f7);
+        LinearLayout body = new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); body.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        int pad = Math.round(24 * getResources().getDisplayMetrics().density); body.setPadding(pad, pad, pad, pad);
+        startupTitle = new TextView(this); startupTitle.setTextSize(24); startupTitle.setTextColor(0xff164b42); body.addView(startupTitle);
+        startupDetails = new TextView(this); startupDetails.setTextSize(16); startupDetails.setTextColor(0xff344b45);
+        startupDetails.setPadding(0, pad, 0, pad); startupDetails.setTextIsSelectable(true); body.addView(startupDetails);
+        Button retry = new Button(this); retry.setText("重新打开"); retry.setMinHeight(pad * 2);
+        retry.setOnClickListener(v -> { if (web != null) loadBundledPage(); }); body.addView(retry);
+        Button copy = new Button(this); copy.setText("复制错误信息"); copy.setMinHeight(pad * 2);
+        copy.setOnClickListener(v -> {
+            android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("晨课启动诊断", startupDetails.getText()));
+            android.widget.Toast.makeText(this, "已复制，可粘贴反馈", android.widget.Toast.LENGTH_SHORT).show();
+        }); body.addView(copy);
+        startupPanel.addView(body); container.addView(startupPanel, new FrameLayout.LayoutParams(-1, -1));
+    }
+    private void showStartupError(String error) {
+        lastStartupError = error == null ? "未知初始化错误" : error;
+        if (lastStartupError.length() > 900) lastStartupError = lastStartupError.substring(0, 900);
+        Log.e("Chenke", lastStartupError);
+        runOnUiThread(() -> {
+            if (startupPanel == null || isFinishing()) return;
+            startupHandler.removeCallbacks(startupTimeout);
+            startupTitle.setText("晨课暂时没能打开");
+            String engine = "";
+            try { if (web != null) engine = "\n\nWebView: " + web.getSettings().getUserAgentString(); } catch (Throwable ignored) {}
+            startupDetails.setText(lastStartupError + "\n\nAndroid " + Build.VERSION.RELEASE + " / API " + Build.VERSION.SDK_INT + engine + "\n\n请复制错误信息反馈，以便继续修复。");
+            startupPanel.setVisibility(View.VISIBLE);
+        });
+    }
+    private static boolean own(Uri uri) { return ResourcePolicy.ownsOrigin(uri.getScheme(), uri.getHost(), uri.getPort()); }
+    private static String diagnosticUrl(Uri uri) {
+        if (ResourcePolicy.engineResource(uri.getScheme())) return uri.getScheme() + ":[本机页面]";
+        String value = uri.getScheme() + "://" + uri.getHost() + (uri.getPort() == -1 ? "" : ":" + uri.getPort()) + uri.getPath();
+        return value.length() > 240 ? value.substring(0, 240) : value;
+    }
     private static WebResourceResponse response(int status, String reason, java.io.InputStream bytes, String mime) {
         Map<String, String> headers = new HashMap<>();
         headers.put("Cache-Control", "no-store"); headers.put("X-Content-Type-Options", "nosniff");
+        try { if (bytes.available() > 0) headers.put("Content-Length", String.valueOf(bytes.available())); } catch (Exception ignored) {}
         return new WebResourceResponse(mime, mime.startsWith("text/") || mime.contains("javascript") || mime.contains("json") ? "UTF-8" : null,
             status, reason, headers, bytes);
     }
@@ -150,6 +267,8 @@ public final class MainActivity extends Activity {
         } catch (Exception ignored) {}
     }
     public final class NativeBridge {
+        @JavascriptInterface public void pageRendered() { runOnUiThread(() -> finishPageInitialization()); }
+        @JavascriptInterface public void startupError(String error) { if (!bootComplete) showStartupError(error); }
         @JavascriptInterface public void postMessage(String raw) {
             if (raw == null || raw.length() > 5_000_000) return;
             runOnUiThread(() -> {
@@ -260,6 +379,7 @@ public final class MainActivity extends Activity {
     @Override public void onBackPressed() { handleBack(); }
     @Override protected void onDestroy() {
         pageReady = false;
+        startupHandler.removeCallbacks(startupTimeout);
         if (fileCallback != null) fileCallback.onReceiveValue(null);
         if (web != null) { web.removeJavascriptInterface("AndroidBridge"); web.destroy(); web = null; }
         queue.shutdown(); super.onDestroy();

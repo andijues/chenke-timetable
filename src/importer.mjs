@@ -1,5 +1,6 @@
-import * as pdfjs from 'pdfjs-dist/build/pdf.mjs';
-import * as pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs';
+import './browser-compat.mjs';
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+import * as pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 import {createWorker} from 'tesseract.js';
 import {groupRows} from './parser.mjs';
 globalThis.pdfjsWorker=pdfWorker;

@@ -1,6 +1,6 @@
 # 晨课 · 个人课表
 
-一个零付费服务、无服务器的个人课表项目。0.2.0 增加可视化节次、手动排课和 Android 原生工程。**本次只做代码、浏览器预览与安装包构建，未连接或安装到手机。** 鸿蒙旧版 0.1.1 的主页已由用户确认可打开；代理提醒能力申请仍待完成授权和响铃验收。iOS 免费云构建产生未签名 IPA，个人签名与真机测试另行完成。Android 使用系统准确闹钟和原生响铃服务，设备响铃尚未实测。
+一个零付费服务、无服务器的个人课表项目。共享界面 0.2.1 修复旧 WebView 的 PDF 库兼容问题；Android 0.2.3 同时包含本机启动资源兼容处理与错误诊断。**Android 0.2.3 已在鸿蒙 7 的卓易通环境覆盖安装，用户确认能看到课表主页；锁屏响铃仍待验收。** 鸿蒙、iOS 安装包保持 0.2.0；鸿蒙历史 0.1.1 主页曾获用户确认，代理提醒尚待授权和响铃验收；iOS 未签名 IPA 尚需个人签名与真机测试。
 
 用户设备：鸿蒙 7、最新版 iOS；只有 Windows，没有 Mac。
 
@@ -48,7 +48,7 @@ npm.cmd run test:ui
 
 ## Android 安装与构建
 
-已生成 output/晨课-Android-调试.apk；支持系统准确闹钟、原生关闭/稍后提醒、重启恢复和本地文件选择/备份。无需应用商店、服务器或付费账号。APK 声明最低 Android 8.0，目标 API 36；本次仅 Windows 编译与包校验，没有真机安装或响铃验收。详细步骤见 [Windows 构建和使用安卓](docs/Windows安装安卓.md)。
+Android 0.2.3 输出为 output/晨课-Android-调试.apk；支持系统准确闹钟、原生关闭/稍后提醒、重启恢复和本地文件选择/备份。无需应用商店、服务器或付费账号。APK 声明最低 Android 8.0，目标 API 36。编译和 26 项 JVM 检查通过；手机正在鸿蒙 7 的卓易通环境测试，不能据此宣称 Android 真机或锁屏响铃已通过。详细步骤见 [Windows 构建和使用安卓](docs/Windows安装安卓.md)。
 
 ## 鸿蒙 7 安装
 
@@ -69,7 +69,7 @@ npm.cmd run test:ui
 
 ## iOS：只有 Windows 的免费安装路线
 
-源码已发布到 [chenke-timetable](https://github.com/andijues/chenke-timetable)，[2026-10-14 的最新 iOS 云构建](https://github.com/andijues/chenke-timetable/actions/runs/38575471683)已成功，包含移动端和多行粘贴解析修正。使用 Xcode 26.6、iOS 26.5 SDK，应用最低支持 iOS 26.0。IPA 对应源码提交为 `e5a77b64df753555579734148cf8da13ce64742e`。
+源码已发布到 [chenke-timetable](https://github.com/andijues/chenke-timetable)，[2026-10-15 的 iOS 0.2.0 云构建](https://github.com/andijues/chenke-timetable/actions/runs/38681380137)已成功，包含可视化节次与手动排课。使用 Xcode 26.6、iOS 26.5 SDK，应用最低支持 iOS 26.0。IPA 对应源码提交为 `e310ad152f5011b327fb3bead08d4889c46d391c`；本次 Android/WebView 修复尚未重建进该 IPA。
 
 本机安装包保存在 `output/晨课-iOS-未签名.ipa`。操作步骤见 [Windows 安装 iOS 版](docs/Windows安装iOS.md)。以后重新构建可按以下流程执行：
 

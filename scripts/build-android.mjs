@@ -42,6 +42,9 @@ async function run(command,parameters,cwd=stage){
  });
 }
 const skip=new Set(['.gradle','build','local.properties','node_modules']);
+const appGradle=await readFile(path.join(root,'native/android/app/build.gradle'),'utf8');
+const version=appGradle.match(/versionName\s+'([^']+)'/)?.[1],versionCode=Number(appGradle.match(/versionCode\s+(\d+)/)?.[1]);
+if(!version||!versionCode)throw Error('Android 版本信息缺失');
 await cp(path.join(root,'native/android'),stage,{recursive:true,filter:p=>!p.split(path.sep).some(s=>skip.has(s))&&!/\.(jks|keystore|p12|pem)$/i.test(p)});
 await cp(path.join(root,'dist'),path.join(stage,'app/src/main/assets/web'),{recursive:true});
 await writeFile(path.join(stage,'local.properties'),'sdk.dir='+sdk.replaceAll('\\','/').replaceAll(':','\\:')+'\n');
@@ -49,11 +52,13 @@ await mkdir(path.join(root,'reports'),{recursive:true});
 try {
  if(!await exists(keystore))await run(path.join(java,'bin',process.platform==='win32'?'keytool.exe':'keytool'),
   ['-genkeypair','-keystore',keystore,'-storepass','android','-keypass','android','-alias','androiddebugkey','-keyalg','RSA','-keysize','2048','-validity','3650','-dname','CN=Chenke Personal Debug,O=Personal,C=CN']);
- await run(path.join(java,'bin',process.platform==='win32'?'javac.exe':'javac'),['-encoding','UTF-8','-d',path.join(stage,'jvm-tests'),path.join(root,'native/android/app/src/main/java/com/andijues/chenke/AlarmTime.java'),path.join(root,'tests/android/AlarmTimeTest.java')]);
+ await run(path.join(java,'bin',process.platform==='win32'?'javac.exe':'javac'),['-encoding','UTF-8','-d',path.join(stage,'jvm-tests'),path.join(root,'native/android/app/src/main/java/com/andijues/chenke/AlarmTime.java'),path.join(root,'tests/android/AlarmTimeTest.java'),path.join(root,'native/android/app/src/main/java/com/andijues/chenke/BundledPage.java'),path.join(root,'tests/android/BundledPageTest.java'),path.join(root,'native/android/app/src/main/java/com/andijues/chenke/ResourcePolicy.java'),path.join(root,'tests/android/ResourcePolicyTest.java')]);
  await run(path.join(java,'bin',process.platform==='win32'?'java.exe':'java'),['-cp',path.join(stage,'jvm-tests'),'com.andijues.chenke.AlarmTimeTest']);
+ await run(path.join(java,'bin',process.platform==='win32'?'java.exe':'java'),['-cp',path.join(stage,'jvm-tests'),'com.andijues.chenke.BundledPageTest']);
+ await run(path.join(java,'bin',process.platform==='win32'?'java.exe':'java'),['-cp',path.join(stage,'jvm-tests'),'com.andijues.chenke.ResourcePolicyTest']);
  await run(gradle,['--no-daemon','--console=plain',':app:assembleDebug',':app:lintDebug']);
  const apk=await readFile(path.join(stage,'app/build/outputs/apk/debug/app-debug.apk'));
  const dest=path.join(root,'output/晨课-Android-调试.apk');await mkdir(path.dirname(dest),{recursive:true});await writeFile(dest,apk);
- const report={build:'success',compiledAt:new Date().toISOString(),version:'0.2.0',minSdk:26,targetSdk:36,compileSdk:36,gradle:'8.13',agp:'8.13.2',java:'17',javaHome:java,artifact:path.relative(root,dest).replaceAll('\\','/'),bytes:apk.length,sha256:createHash('sha256').update(apk).digest('hex'),stage,sdk,debugSigned:true,lint:'passed',jvmRuleTests:7,deviceInstalled:false,lockScreenAlarmTested:false};
+ const report={build:'success',compiledAt:new Date().toISOString(),version,versionCode,minSdk:26,targetSdk:36,compileSdk:36,gradle:'8.13',agp:'8.13.2',java:'17',javaHome:java,artifact:path.relative(root,dest).replaceAll('\\','/'),bytes:apk.length,sha256:createHash('sha256').update(apk).digest('hex'),stage,sdk,debugSigned:true,lint:'passed',jvmRuleTests:7,jvmStartupTests:6,jvmResourceTests:13,deviceInstalled:false,lockScreenAlarmTested:false};
  await writeFile(path.join(root,'reports/android-build.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
 }finally{await writeFile(path.join(root,'reports/android-build.log'),log);}
