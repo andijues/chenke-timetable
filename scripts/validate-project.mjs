@@ -33,12 +33,17 @@ const harmonyCaptures=await json('reports/harmony-ui-captures.json');
 const timetableImportValidation=await json('reports/timetable-import-validation.json');
 const wholeReview=await json('reports/whole-ui-review.json');
 const priorTodayReview=await json('reports/today-design-review.json');
-const todayReview=wholeReview?.version===packageInfo.version?wholeReview:priorTodayReview?.version===packageInfo.version?priorTodayReview:null;
+const navigationReview=await json('reports/navigation-review.json');
+const navigationOnly=navigationReview?.version===packageInfo.version;
+const navigationChecks=navigationOnly?await json('reports/navigation-ui-checks.json'):null;
+if(navigationOnly&&(!navigationChecks?.passed||navigationChecks.failed))throw Error('导航检查缺失或失败');
+const todayReview=navigationOnly?navigationReview:wholeReview?.version===packageInfo.version?wholeReview:priorTodayReview?.version===packageInfo.version?priorTodayReview:null;
 const wholeCapturePacket=await json('reports/whole-ui-captures.json');
-const documentationReport=todayReview===wholeReview?'reports/whole-ui-documentation.md':'reports/today-design-documentation.md';
+const documentationReport=navigationOnly?'reports/navigation-documentation.md':todayReview===wholeReview?'reports/whole-ui-documentation.md':'reports/today-design-documentation.md';
 const wholeScope=await json('reports/whole-ui-update-scope.json');
 const priorTodayScope=await json('reports/today-update-scope.json');
-const todayScope=wholeScope?.version===packageInfo.version?wholeScope:priorTodayScope?.version===packageInfo.version?priorTodayScope:null;
+const navigationScope=await json('reports/navigation-update-scope.json');
+const todayScope=navigationOnly?navigationScope:wholeScope?.version===packageInfo.version?wholeScope:priorTodayScope?.version===packageInfo.version?priorTodayScope:null;
 const extraUICaptures=await Promise.all(['reports/whole-ui-surface-captures.json','reports/whole-ui-harmony-captures.json'].map(async path=>({path,stats:(await json(path))?.stats??null})));
 if(todayReview===wholeReview){for(const report of extraUICaptures){if(!report.stats?.expected||report.stats.unexpected||report.stats.flaky||report.stats.skipped)throw Error('补充界面截图检查缺失或未通过：'+report.path);}}
 if(todayReview){
@@ -78,14 +83,15 @@ if(!corePassed||coreFailed!==0)throw Error('规则检查记录缺失或失败');
 const summary={
   date:new Date().toISOString(),version:packageInfo.version,build:'passed',
   supportedPlatforms:['android','harmony'],
-  scope:harmonyOnly?'Current Harmony native compilation, actual ArkTS bridge logic with stubbed OS services and shared web browser tests; Android package and device results retained as historical evidence':'Shared interface browser checks, simulated native bridges, JVM Android startup/resource/alarm checks and native compilation; phone compatibility results recorded per APK hash',
+  scope:navigationOnly?'Current targeted header/navigation browser checks and both native compilations/JVM checks; prior full functional/core checks explicitly retained as history':harmonyOnly?'Current Harmony native compilation, actual ArkTS bridge logic with stubbed OS services and shared web browser tests; Android package and device results retained as historical evidence':'Shared interface browser checks, simulated native bridges, JVM Android startup/resource/alarm checks and native compilation; phone compatibility results recorded per APK hash',
   updateTarget:harmonyOnly?'harmony':'android-harmony',
-  coreTests:{passed:corePassed,failed:coreFailed},
-  harmonyBridgeTests,
+  coreTests:{passed:corePassed,failed:coreFailed,historical:navigationOnly},
+  harmonyBridgeTests:harmonyBridgeTests?{...harmonyBridgeTests,historical:navigationOnly}:null,
   androidJvmTests:{runThisUpdate:!harmonyOnly,passed:(android?.jvmRuleTests??0)+(android?.jvmStartupTests??0)+(android?.jvmResourceTests??0)+(android?.jvmClockTests??0),alarmTime:android?.jvmRuleTests??0,startupPage:android?.jvmStartupTests??0,resourcePolicy:android?.jvmResourceTests??0,systemClockDates:android?.jvmClockTests??0,scope:'Alarm date validation, bundled HTML startup, local resource handling and safe next-occurrence Clock handoff'},
-  uiFunctionalTests:{passed:functional.length,failed:0,cases:functional.map(s=>s.title)},
-  uiCaptureTests:{passed:capture.length,failed:0},screenshots:wholeCapturePacket?.version===packageInfo.version?wholeCapturePacket.captures.map(c=>c.path):ui.map(n=>'.impeccable/review/'+n+'.png'),
-  additionalUICaptureReports:extraUICaptures,
+  uiFunctionalTests:navigationOnly?{passed:navigationChecks.passed,failed:0,scope:navigationChecks.scope,cases:navigationChecks.checks}:{passed:functional.length,failed:0,cases:functional.map(s=>s.title)},
+  uiCaptureTests:navigationOnly?{passed:navigationChecks.captures.length,failed:0,unit:'viewport screenshots'}:{passed:capture.length,failed:0},screenshots:navigationOnly?navigationChecks.captures.map(c=>c.path):wholeCapturePacket?.version===packageInfo.version?wholeCapturePacket.captures.map(c=>c.path):ui.map(n=>'.impeccable/review/'+n+'.png'),
+  previousUIRegression:navigationOnly?{historical:true,report:'reports/ui-results.json',stats:uiReport.stats}:null,
+  additionalUICaptureReports:extraUICaptures.map(r=>({...r,historical:navigationOnly})),
   designReview:todayReview??{...(harmonyOnly?harmonyUIReview:clockReview??{disposition:'pending'}),historical:true,currentUpdate:'Historical interface review; no current daily-home verdict available'},
   harmonyPreviewCaptures:harmonyCaptures?{...harmonyCaptures,historical:true}:null,
   designDocumentation:todayReview?{historical:false,scope:'Current shared interface and task-screen components; no device UI or ringing certification',files:['DESIGN.md','.impeccable/design.json'],report:documentationReport}:{incumbentVisualSystemPreserved:true,historical:true,scope:'Historical interface documentation',report:harmonyOnly?'reports/harmony-ui-documentation.md':'reports/clock-ui-documentation.md'},
@@ -101,4 +107,4 @@ const summary={
   timetableImportValidation,realUserPDFReceived:Boolean(timetableImportValidation?.realDocumentsValidated),lockScreenAlarmTestedThisUpdate:!localOnly&&Boolean(androidDevice?.lockScreenAlarmTested),lockScreenAlarmPassedThisUpdate:!localOnly&&Boolean(androidDevice?.lockScreenAlarmPassed),files
 };
 await writeFile('reports/validation.json',JSON.stringify(summary,null,2));
-console.log(harmonyOnly?'鸿蒙验证记录已保存：规则 '+corePassed+' 项，桥接逻辑 '+harmonyBridgeTests.passed+' 项，浏览器功能 '+functional.length+' 项与截图检查 '+capture.length+' 项；鸿蒙不签名、不安装，响铃未实测。':'验证记录已保存：规则 '+corePassed+' 项，浏览器功能 '+functional.length+' 项，截图记录 '+capture.length+' 项，Android JVM '+summary.androidJvmTests.passed+' 项；设备结论按 APK 哈希单独记录。');
+console.log(navigationOnly?'导航局部验证已保存：'+navigationChecks.passed+' 项现有导航检查、'+navigationChecks.captures.length+' 张截图、Android JVM '+summary.androidJvmTests.passed+' 项；旧版全量规则和界面检查保留为历史。':harmonyOnly?'鸿蒙验证记录已保存：规则 '+corePassed+' 项，桥接逻辑 '+harmonyBridgeTests.passed+' 项，浏览器功能 '+functional.length+' 项与截图检查 '+capture.length+' 项；鸿蒙不签名、不安装，响铃未实测。':'验证记录已保存：规则 '+corePassed+' 项，浏览器功能 '+functional.length+' 项，截图记录 '+capture.length+' 项，Android JVM '+summary.androidJvmTests.passed+' 项；设备结论按 APK 哈希单独记录。');
