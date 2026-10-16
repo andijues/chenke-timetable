@@ -121,7 +121,7 @@ typography:
     letterSpacing: "-.035em"
   lead-number:
     fontFamily: "-apple-system,BlinkMacSystemFont,'HarmonyOS Sans SC','PingFang SC','Microsoft YaHei',sans-serif"
-    fontSize: "54px"
+    fontSize: "48px"
     fontWeight: 650
     lineHeight: 1.3
     letterSpacing: "-.03em"
@@ -140,7 +140,7 @@ rounded:
   row: "14px"
   panel: "16px"
   panel-mobile: "15px"
-  dialog: "18px"
+  dialog: "16px"
   progress: "2px"
 spacing:
   xs: "4px"
@@ -212,6 +212,17 @@ components:
     textColor: "{colors.ink}"
     padding: "0 18px"
     height: "40px"
+  settings-tabs:
+    backgroundColor: "{colors.soft}"
+    rounded: "{rounded.row}"
+    padding: "5px"
+  settings-tab:
+    textColor: "{colors.muted}"
+    rounded: "{rounded.field}"
+    height: "48px"
+  settings-tab-selected:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.primary}"
   next-lesson:
     backgroundColor: "{colors.next-bg}"
     textColor: "{colors.next-ink}"
@@ -232,6 +243,12 @@ components:
     textColor: "{colors.ink}"
     rounded: "{rounded.panel}"
     padding: "24px"
+  course-dialog:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.dialog}"
+    padding: "0"
+    width: "min(640px,calc(100vw - 32px))"
 ---
 
 # Design System: 晨课 · 个人课表
@@ -252,7 +269,7 @@ components:
 - 桌面侧栏与手机底栏分别布局；狭窄空间允许换行与日期横向浏览。
 - 平面色调分层为主，只为选项层级和模态浮层保留阴影。
 
-本文记录共享网页视觉，依据 public/style.css 末尾的 Daily workspace 覆盖层、src/main.mjs 和 src/home-ui.mjs。具体页面目标保留在 .impeccable/surfaces/src-main-mjs.md。本文件替换旧松绿版本；frontmatter 是规范性令牌，.impeccable/design.json 记录扩展和独立组件示例。
+本文记录共享网页视觉，依据 public/style.css 末尾的 Daily workspace 与 Shared task screens 覆盖层、src/main.mjs、src/home-ui.mjs、src/schedule-ui.mjs 和 index.html。具体页面目标保留在 .impeccable/surfaces/src-main-mjs.md。本文件替换旧松绿版本；frontmatter 是规范性令牌，.impeccable/design.json 记录扩展和独立组件示例。
 
 ## Colors
 
@@ -296,7 +313,7 @@ components:
 - **Body**（body）：默认阅读文字；输入控件使用 field，避免输入文字过小。
 - **Label**（label）：短标签与表单基础标签；表单长说明按现有组件提高至正文附近。
 - **Course Title**（course-title / course-title-mobile）：桌面与触控日程课程名。
-- **Time**（wake-time / wake-time-mobile）：起床时刻。提前量使用 lead-number，触控时实际为（48px）。
+- **Time**（wake-time / wake-time-mobile）：起床时刻。提前量使用 lead-number；闹钟页的明日时刻独立置于浅黄区，不与提前量混排。
 - **Navigation**（navigation / navigation-mobile）：桌面侧栏与手机底栏。
 
 **The Readable Time Rule.** 时间保持等宽数字，课程名和地点允许换行；不要为整齐外观截断关键安排。
@@ -309,7 +326,9 @@ components:
 
 日期数据始终保留七天：桌面完整排列；触控布局一次显示五个日期并可横向滑动；小于（359px）一次显示三个并保留滑动提示。选择态与日程内容保持对应。周课表允许横向浏览，不挤成不可读的小字。
 
-课程行使用固定时间列、弹性信息列和状态列：桌面时间列（64px），手机（55px）。课程名和地点可换行，多数操作目标（44px）或更高。弹窗跟随 visual viewport 调整可用高度；键盘打开时隐藏底栏，保留表单滚动与保存入口。
+课程行使用固定时间列、弹性信息列和状态列：桌面时间列（64px），手机（55px）。课程名和地点可换行，多数操作目标（44px）或更高。校对列表在触控布局中把操作移到独立一行，避免压缩课程文字。
+
+设置工作区最大宽度（980px），分类条始终保留五列；桌面图标与文字横排，触控布局改为纵排。单个设置内容区桌面内边距（28px），触控为（22px 20px）；学期表单最大宽度（620px）。课程编辑浮层使用 course-dialog 宽度，触控时左右各留（8px）；跟随 visual viewport 调整可用高度，键盘打开时隐藏底栏，保留表单滚动与保存入口。
 
 ## Elevation & Depth
 
@@ -348,6 +367,8 @@ components:
 
 内容面、正文色、轻边界和字段圆角。输入使用 field，最小高度（44px），常规内边距（11px 12px），勾选、滑杆和插入点使用交互色。错误显示在相关区域，使用可读文字。提前量精确输入保持固定数值列，与标签和单位分开，避免被挤成窄框。
 
+学期、例外日期和编辑器基本信息字段提高至（48px）；上课时间与周次字段至少（46px）。显式标签位于字段上方，长说明单独换行。
+
 ### Navigation
 
 课表、导入、闹钟、设置四项导航。桌面侧栏图标文本横排，手机底栏纵排；选中蓝字与柔蓝底并用，桌面浅色选中底实际（#e3eaff）。保留 aria-current="page" 和每项文字。
@@ -355,6 +376,28 @@ components:
 ### Segmented Control
 
 日程与周课表使用柔蓝底双项分段。选中为内容面、深墨字和轻投影。两项直接可点，日期选择不替代视图切换。
+
+### Settings Category Tabs
+
+学期、节次、课程、调课、备份使用五项等宽分类条。柔蓝底承托内容面选中项，选中同时使用钴蓝文字和较高字重，不加阴影。桌面项高度使用 settings-tab，触控项至少（58px）。
+
+分类条保留 tablist、tab、tabpanel、aria-selected 与关联标签，只有当前项进入 Tab 顺序；方向键及 Home / End 切换并聚焦。切换仅隐藏内容区，保留未保存输入。侧车以此替换双项分段示例，控制示例总量，不移除应用中的视图分段。
+
+### Import Review
+
+导入使用三步过程提示、文件选择和可直接粘贴的文字区。校对项保留编号、弹性课程信息和独立操作组；触控时校对与移除在底部成行，以细边界分隔。课程名、地点、周次与识别说明允许换行，提交区同时保留“待确认、不直接设置闹钟”的说明。
+
+### Alarm Preferences
+
+开关和完整标签同行，文字列可收缩换行，开关不被挤压；标签同时包含规则说明，保留原生 checkbox 与 switch 语义。明日时刻使用独立浅黄区域，系统发送、授权与错误信息另列；状态标题和原因始终来自实际平台结果。
+
+### Grouped Course Editor
+
+课程编辑浮层统一为内容面与 dialog 圆角。基本信息、上课时间和周次分组，组间使用轻边界；时间填写方式、单双周、具体周次与单次日期保留独立入口。标题栏和保存栏在浮层内粘附，正文可滚动；触控布局将基本字段改为单列，同时保留开始与结束时间的成对关系。
+
+### Backup Action Rows
+
+导出备份、恢复备份和导出日历使用完整宽度的图标文字行，以细分隔线区分；主标题和说明分层，末端箭头提示入口。行高桌面至少（88px），触控至少（94px）；恢复行由原生文件输入覆盖完整点击区，聚焦时整行显示焦点。清空操作单独放在下方危险区域，并保留外部时钟需单独处理的说明。
 
 ### Next Lesson
 

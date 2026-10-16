@@ -1966,3 +1966,119 @@ input:not([type=range]):not([type=checkbox]),textarea,select{border-radius:10px;
 @media(prefers-reduced-motion:reduce){.date-chip,.button,.nav-item{transition:none!important}.lesson-progress>i{transition:none!important}}
 @media(max-width:359px){.date-strip{--date-visible:3;grid-auto-columns:calc((100% - 10px)/3)}}
 
+/* Shared task screens: one control language for import, alarms and editing. */
+input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{border-color:var(--line);background:var(--surface);color:var(--ink);caret-color:var(--green)}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
+.button>.icon{width:18px;height:18px;flex-shrink:0}
+.import-steps{display:flex;align-items:center;gap:0;list-style:none;margin:0 0 24px;padding:0;max-width:620px}
+.import-steps li{display:flex;align-items:center;gap:8px;flex:1;min-height:44px;font-size:14px;color:var(--muted)}
+.import-steps li:not(:last-child)::after{content:'';height:1px;min-width:12px;flex:1;margin:0 18px;background:var(--line)}
+.import-steps .icon{width:18px;height:18px;flex-shrink:0}.import-steps .current{color:var(--green);font-weight:650}.import-steps .complete{color:var(--ink)}
+.import-main{min-width:0}.dropzone{min-height:270px;padding:28px;gap:10px;justify-content:center}
+.dropzone strong{margin-top:6px}.dropzone .button{margin-top:8px;min-width:150px}.dropzone>span:not(.button){line-height:1.8;max-width:32ch}
+.import-alternative{background:var(--surface);border-radius:16px;margin-top:20px;padding:24px}
+.import-alternative h2{font-size:17px;margin:0}.import-alternative .section-heading{margin-bottom:16px;gap:12px}.import-alternative .section-heading>span{font-size:12px;color:var(--muted)}
+.import-alternative textarea{display:block;width:100%;min-height:130px;resize:vertical;margin-bottom:14px;font-size:16px;line-height:1.8}
+.import-alternative .button{margin:0}.import-guide{padding:4px 0 0 26px}.import-guide>div{padding:18px 0}
+.review-section{scroll-margin-top:20px}.review-section>.section-heading{align-items:center;gap:10px}.review-section h2{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:20px}
+.review-section h2 span{margin:0;font-size:12px;color:var(--muted);background:var(--soft);border-radius:7px;padding:4px 7px;font-weight:500}
+.review-description{margin:0 0 16px;line-height:1.8;overflow-wrap:anywhere}.review-list{display:flex;flex-direction:column;gap:12px}
+.review-list .review-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;grid-template-areas:'index content actions';gap:14px;padding:20px;border:0;border-radius:14px;align-items:start}
+.review-row>.review-index{grid-area:index;margin-top:2px;background:var(--soft);color:var(--green);width:24px;height:28px;border-radius:6px}
+.review-row>.review-content{grid-area:content;min-width:0}.review-content>strong{font-size:17px;line-height:1.6;overflow-wrap:anywhere}
+.review-content>p{margin-top:7px;font-size:14px;line-height:1.7;color:var(--muted);overflow-wrap:anywhere}.review-content>.review-slot{color:var(--ink);display:flex;flex-wrap:wrap;gap:12px}
+.review-content>small{display:block;margin-top:10px;font-size:13px;line-height:1.7;color:var(--muted)}
+.review-row>.review-row-actions{grid-area:actions;display:flex;align-items:center;gap:6px;align-self:center}.review-row-actions .icon-button{width:44px;min-height:44px;color:var(--muted)}
+.review-actions{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:18px;padding:20px 0;border-top:1px solid var(--line)}
+.review-actions>p{font-size:13px;color:var(--muted);line-height:1.8;max-width:32ch}.review-actions .button{flex-shrink:0}
+.alarm-preferences{padding:20px 22px;margin-bottom:20px;background:var(--surface);border-radius:16px}
+.alarm-preferences .clock-mode-label{font-size:13px;color:var(--muted);margin:0 0 18px}.alarm-preferences select{margin-top:7px;color:var(--ink)}
+.alarm-preferences .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0;margin:0;border:0;cursor:pointer;min-height:48px}
+.toggle-row>span:first-child{min-width:0}.toggle-row small{display:block;line-height:1.7}.switch span{background:var(--line)}
+.clock-handoff{margin-bottom:20px}.clock-handoff>.section-heading{margin-bottom:8px}.clock-next{padding:14px 16px;background:var(--wake-bg);color:var(--wake-ink);border-radius:12px;margin:14px 0 12px;gap:5px}
+.clock-next strong{font-size:40px;color:inherit;line-height:1.25}.clock-next span{color:inherit;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.clock-handoff>.alarm-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin:14px 0 8px;align-items:center}
+.clock-handoff .clock-secondary{gap:8px;justify-content:space-between;border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+.clock-handoff .clock-secondary button{padding:8px 0}.clock-help{margin-top:8px}.clock-help summary{padding-block:10px}
+.alarm-rule{margin:20px 0}.alarm-rule>h2{font-size:18px}.lead-number{margin:12px 0 2px}.lead-number strong{font-size:48px}
+.alarm-main .native-status{display:block;margin-top:20px}.native-status strong{display:block;margin-bottom:6px}.native-status p{margin:0}
+.harmony-authorization{padding:22px;background:var(--surface);border:0;border-radius:16px;margin:20px 0}
+.harmony-authorization h2{font-size:18px;margin-bottom:14px}.harmony-authorization dl{margin:0}.harmony-authorization dl>div{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--line)}
+.harmony-authorization dt,.harmony-authorization dd{margin:0;font-size:14px}.harmony-authorization dd{font-weight:600}.harmony-authorization>p{font-size:14px;color:var(--muted);line-height:1.8;margin-top:16px}
+.harmony-feedback{margin-top:14px;padding:14px;border-radius:10px;background:var(--soft);font-size:14px;line-height:1.8}.harmony-feedback.error{color:var(--danger)}
+.alarm-week .section-heading{margin-bottom:6px}.alarm-week .helper{padding-top:14px;border-top:1px solid var(--line);margin-top:5px}
+.settings-workspace{max-width:980px}.settings-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:22px;padding:5px;background:var(--soft);border-radius:14px}
+.settings-tabs>button{display:flex;align-items:center;justify-content:center;gap:9px;min-height:48px;border-radius:10px;color:var(--muted);font-size:14px;cursor:pointer}
+.settings-tabs>button[aria-selected=true]{background:var(--surface);color:var(--green);font-weight:650}.settings-tabs>button:hover{color:var(--green)}.settings-tabs .icon{width:19px;height:19px}
+.settings-workspace>.settings-pane{margin:0;padding:28px;min-width:0}.settings-pane[hidden]{display:none}
+.settings-pane-heading{margin-bottom:26px}.settings-pane-heading h2{font-size:21px;line-height:1.4}.settings-pane-heading p{font-size:14px;line-height:1.8;color:var(--muted);margin-top:8px;max-width:60ch}
+.settings-pane .settings-form{max-width:620px;gap:22px 20px}.settings-form>label,.exception-form>label{font-size:14px;line-height:1.7;color:var(--ink)}
+.settings-form input,.settings-form select,.exception-form input,.exception-form select{margin-top:8px;min-height:48px;font-size:16px}
+.settings-form label small{display:block;font-size:13px;line-height:1.7;color:var(--muted);margin-top:8px}
+.settings-form .semester-preview{grid-column:1/-1;padding:14px 16px;background:var(--soft);color:var(--ink);border-radius:10px;font-size:14px;line-height:1.9;margin:0}
+.settings-pane .settings-form>.button{justify-self:start;margin:0}
+.settings-pane .period-config{grid-template-columns:minmax(0,1fr) 220px;gap:20px;align-items:start}.period-config>label{font-size:14px}.period-config select{min-height:48px}
+.period-config .period-count-control{margin-top:7px}.settings-pane #period-scope-note{font-size:13px;line-height:1.8;margin-top:14px}
+.settings-pane .period-chart{padding:10px 12px;background:var(--soft);border-radius:12px;margin-block:20px}
+.period-chart-row.active{outline:1px solid var(--green);outline-offset:-1px;background:var(--surface)}
+.settings-pane .period-sliders{padding:18px 0;gap:12px}.period-sliders>strong{font-size:15px}.period-sliders label{font-size:14px}
+.period-precise{padding:0;border-bottom:1px solid var(--line)}.period-precise summary{min-height:48px;font-size:14px;padding-block:12px;color:var(--green)}
+.period-grid{margin:10px 0 20px;gap:10px}.periods-editor .period-row{padding:10px 0;border-bottom:1px solid var(--line)}
+.period-save{margin-top:20px;gap:12px 18px}.period-save>span{font-size:13px;max-width:36ch}
+.management-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.management-toolbar>span{font-size:13px;color:var(--muted)}
+.managed-course{padding:18px 0;min-height:92px;gap:14px;align-items:center}.managed-course strong{font-size:16px;line-height:1.6;overflow-wrap:anywhere}.managed-course small{font-size:13px;line-height:1.7;margin-top:4px}
+.managed-course>span:nth-child(2){min-width:0}.managed-course>.icon{width:18px;height:18px;flex-shrink:0;color:var(--muted)}
+.management-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:45px 16px;gap:12px;color:var(--muted)}.management-empty>.icon{color:var(--green);width:30px;height:30px}.management-empty strong{font-size:18px;color:var(--ink)}.management-empty p{font-size:14px;line-height:1.8}
+.exception-form{max-width:680px;gap:20px}.exception-form>.button{justify-self:start}.exception-list{margin-top:24px}.exception-list>div{padding:16px 0;align-items:center}.exception-list strong{font-size:14px}.exception-list small{font-size:13px;line-height:1.7}
+.backup-actions{display:flex;flex-direction:column}.backup-action{display:flex;align-items:center;gap:16px;position:relative;min-height:88px;width:100%;padding:18px 0;border-bottom:1px solid var(--line);color:var(--ink);text-align:left;cursor:pointer}
+.backup-action>span{flex:1;min-width:0}.backup-action>.icon:first-child{color:var(--green);width:23px;height:23px}.backup-action>.icon:last-of-type{width:18px;color:var(--muted)}
+.backup-action strong{display:block;font-size:16px;line-height:1.6}.backup-action small{display:block;font-size:13px;line-height:1.7;color:var(--muted);margin-top:4px}.backup-action:hover{background:var(--soft)}
+.backup-action input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}.backup-action:focus-within{outline:3px solid var(--focus);outline-offset:3px;border-radius:9px}
+.settings-pane .danger-zone{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:32px;padding-top:24px}.danger-zone strong{font-size:14px}.danger-zone p{font-size:13px;line-height:1.8;color:var(--muted);margin-top:6px}.danger-zone>.text-button{flex-shrink:0}
+#course-dialog{width:min(640px,calc(100vw - 32px));padding:0;background:var(--surface);color:var(--ink);border-radius:16px;box-shadow:0 18px 70px #15244930}
+#course-dialog::backdrop{background:#13213c66}#course-form{gap:0}
+#course-dialog .dialog-heading{position:sticky;top:0;z-index:3;margin:0;padding:18px 24px;background:var(--surface);border-bottom:1px solid var(--line)}
+#course-dialog .dialog-heading h2{font-size:21px}#course-dialog .dialog-heading .icon-button{width:44px;height:44px}
+.editor-basics{padding:22px 24px;display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:18px}.editor-basics>label:first-child{grid-column:1/-1}
+.editor-basics label{font-size:14px;line-height:1.7;min-width:0}.editor-basics input,.editor-basics select{margin-top:7px;font-size:16px;min-height:48px}
+#course-dialog .course-time-section,#course-dialog .course-weeks{padding:22px 24px;margin:0;border-top:1px solid var(--line);border-bottom:0}
+#course-dialog h3{font-size:16px;font-weight:650;margin:0 0 16px}.time-mode-buttons{background:var(--soft);padding:4px;border-radius:12px;gap:4px;margin-bottom:18px}
+.time-mode-buttons>button{border:0;background:transparent;border-radius:9px;font-size:14px;min-height:44px}.time-mode-buttons>button[aria-pressed=true]{background:var(--green);color:var(--surface)}
+.actual-course-times{gap:16px}.actual-course-times input,.course-weeks input{font-size:16px;min-height:46px;margin-top:7px}.actual-course-times label,.course-weeks label{font-size:14px}
+.course-weeks .week-patterns{margin-block:16px 12px}.week-patterns>button{min-height:44px;font-size:14px}.course-weeks .helper{font-size:13px}.selection-summary{font-size:13px;line-height:1.8;background:var(--soft);border-radius:10px;padding:12px 14px;color:var(--ink)}
+#course-dialog .single-date-details{padding:4px 24px 16px;margin:0}#course-dialog .single-date-details label{font-size:14px}#course-dialog .single-date-details input{margin-top:7px;font-size:16px}
+#course-dialog .color-picker{margin:0 24px 22px;gap:12px}#course-dialog .color-picker legend{font-size:14px;margin-bottom:12px}.color-picker input:focus-visible+span{outline-color:var(--focus)}
+#course-dialog .editor-confirm{margin:0 24px 18px;padding:12px;background:var(--soft);border-radius:10px;font-size:14px;line-height:1.7;min-height:52px}
+#course-dialog .raw-details{margin:0 24px 18px}#course-dialog .form-error{margin:0 24px;font-size:14px}#course-dialog .form-error:empty{display:none}
+#course-dialog .dialog-actions{position:sticky;bottom:0;margin:0;padding:16px 24px;background:var(--surface);border-top:1px solid var(--line);z-index:3}
+#toast{background:var(--next-bg);color:var(--next-ink);font-size:14px;line-height:1.7}
+@media(max-width:760px),(max-width:1000px) and (max-height:500px),(hover:none) and (pointer:coarse){
+  .import-steps{margin-bottom:18px}.import-steps li{font-size:12px;gap:6px}.import-steps li:not(:last-child)::after{margin:0 10px}.import-steps .icon{width:16px;height:16px}
+  .import-layout{display:flex;flex-direction:column;gap:28px}.dropzone{padding:24px 18px;min-height:260px}.dropzone .icon{width:48px;height:48px;padding:10px}.dropzone strong{font-size:19px}.dropzone>span:not(.button){font-size:13px}
+  .import-alternative{padding:20px;margin-top:18px}.import-alternative .section-heading{display:block}.import-alternative .section-heading>span{display:block;margin-top:6px}.import-alternative textarea{min-height:136px}.import-guide{padding:0;border:0}.import-guide>div{padding-block:16px}
+  .review-section h2{font-size:19px}.review-section>.section-heading>.text-button{font-size:13px;padding-inline:4px}
+  .review-list .review-row{grid-template-columns:24px minmax(0,1fr);grid-template-areas:'index content' 'actions actions';gap:12px;padding:18px 12px}
+  .review-content>strong{font-size:16px}.review-content>p{font-size:14px}.review-row>.review-row-actions{justify-content:flex-end;width:100%;padding-top:10px;border-top:1px solid var(--line);gap:12px}
+  .review-row-actions .button{min-width:88px}.review-actions{align-items:stretch;flex-direction:column;gap:12px}.review-actions>p{max-width:none}.review-actions .button{width:100%}
+  .alarm-layout{gap:22px}.alarm-preferences{padding:18px 20px}.alarm-preferences .clock-mode-label{margin-bottom:16px}.toggle-row>span:first-child strong{font-size:15px;line-height:1.7}
+  .clock-handoff{padding:20px}.clock-next strong{font-size:38px}.clock-next{padding:14px}.clock-handoff>.alarm-actions>.button{font-size:13px;padding-inline:10px}
+  .clock-secondary .text-button{font-size:12px}.alarm-main .lead-exact{grid-template-columns:auto 76px auto;gap:10px}.alarm-main .lead-exact input[type=number]{width:76px;min-width:72px}
+  .settings-tabs{gap:3px;padding:4px;margin-bottom:18px}.settings-tabs>button{flex-direction:column;gap:4px;min-height:58px;padding:6px 2px;font-size:12px}.settings-tabs .icon{width:19px;height:19px}
+  .settings-workspace>.settings-pane{padding:22px 20px}.settings-pane-heading{margin-bottom:24px}.settings-pane-heading h2{font-size:20px}.settings-pane-heading p{font-size:14px}
+  .settings-pane .settings-form{gap:20px 14px}.settings-pane .settings-form>.button{width:100%}.settings-form .semester-preview{padding:12px;font-size:13px}
+  .settings-pane .period-config{grid-template-columns:minmax(0,1fr);gap:18px}.settings-pane .period-config>label:last-child{max-width:230px}.settings-pane .period-chart{padding:8px;margin-block:18px}
+  .period-chart-row{min-height:54px}.period-axis{font-size:11px}.period-save{display:block}.period-save>.button{width:100%}.period-save>span{display:block;max-width:none;margin-top:12px}
+  .periods-editor .period-row{grid-template-columns:38px minmax(0,1fr) 10px minmax(0,1fr);gap:4px}.periods-editor .period-row input{padding-inline:2px;min-height:46px}
+  .management-toolbar>span{font-size:12px}.management-toolbar .button{font-size:13px;padding-inline:10px}.managed-course{gap:10px}.managed-course strong{font-size:15px}
+  .settings-pane .exception-form{grid-template-columns:minmax(0,1fr);gap:18px}.exception-form>.button{width:100%}
+  .backup-action{gap:12px;min-height:94px}.backup-action strong{font-size:15px}.backup-action small{font-size:13px}.settings-pane .danger-zone{flex-direction:column;align-items:flex-start;gap:10px}
+  #course-dialog{width:min(640px,calc(100vw - 16px));border-radius:16px;max-height:calc(var(--visual-viewport-height,100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px)}
+  #course-dialog .dialog-heading{padding:12px 20px}.editor-basics{padding:20px;grid-template-columns:minmax(0,1fr);gap:18px}.editor-basics>label:first-child{grid-column:auto}
+  #course-dialog .course-time-section,#course-dialog .course-weeks{padding:20px}#course-dialog .actual-course-times{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+  #course-dialog .single-date-details{padding-inline:20px}#course-dialog .color-picker{margin-inline:20px;gap:10px}#course-dialog .editor-confirm{margin-inline:20px}
+  #course-dialog .dialog-actions{padding:14px 20px max(14px,env(safe-area-inset-bottom))}#course-dialog .raw-details{margin-inline:20px}#course-dialog .form-error{margin-inline:20px}
+}
+@media(prefers-color-scheme:dark){
+  .time-mode-buttons>button[aria-pressed=true]{background:#4268e1;color:#fff}#course-dialog::backdrop{background:#080c17aa}.danger{color:var(--danger)}.danger:hover{color:#ffd0db}
+}
+

@@ -35,8 +35,10 @@ test('扫描 PDF 走本机 OCR 并保留待校对状态',async({page})=>{
 test('录入、备份恢复校验和停课例外',async({page})=>{
   await page.goto('/');await page.getByRole('button',{name:/体验演示/}).click();
   await page.getByRole('button',{name:'设置',exact:true}).click();
+  await page.getByRole('tab',{name:'例外日期',exact:true}).click();
   await page.locator('#exception-form [name=date]').fill('2026-10-15');await page.locator('#exception-form [name=note]').fill('节假日');await page.getByRole('button',{name:'添加例外日期'}).click();
   await expect(page.locator('.exception-list')).toContainText('2026-10-15');
+  await page.getByRole('tab',{name:'数据备份',exact:true}).click();
   await page.locator('#restore-input').setInputFiles({name:'bad.json',mimeType:'application/json',buffer:Buffer.from('{"version":42}')});
   await expect(page.locator('#toast')).toContainText('恢复失败');
 });

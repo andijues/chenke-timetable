@@ -7,6 +7,7 @@ const essential=['dist/index.html','dist/app.js','dist/style.css','native/harmon
 const files=[];
 essential.push('src/harmony-ui.mjs','native/harmony/entry/src/main/ets/HarmonyBridge.ets','native/harmony/entry/src/main/ets/entryability/EntryAbility.ets');
 essential.push('src/main.mjs','src/home-ui.mjs','src/clock-policy.mjs','native/android/app/src/main/java/com/andijues/chenke/SystemClock.java','native/android/app/src/main/java/com/andijues/chenke/ClockTime.java');
+essential.push('src/schedule-ui.mjs','index.html');
 for(const path of essential){const bytes=await readFile(path);files.push({path,bytes:bytes.length,sha256:hash(bytes)});}
 const ui=['schedule-desktop-settings','schedule-phone-settings','schedule-user-500-settings','schedule-desktop-course','schedule-phone-course','schedule-user-500-course','schedule-desktop-home','schedule-phone-home','schedule-user-500-home'];
 ui.push('redesign-today-desktop','redesign-today-phone','redesign-today-small','redesign-today-dark','clock-phone','clock-user-500','clock-notice-off','clock-notice-pause','clock-notice-switch','clock-notice-clear');
@@ -30,14 +31,23 @@ const harmonyBridgeTests=await json('reports/harmony-bridge-tests.json');
 const harmonyUIReview=await json('reports/harmony-ui-review.json');
 const harmonyCaptures=await json('reports/harmony-ui-captures.json');
 const timetableImportValidation=await json('reports/timetable-import-validation.json');
-const todayReview=await json('reports/today-design-review.json');
-const todayScope=await json('reports/today-update-scope.json');
+const wholeReview=await json('reports/whole-ui-review.json');
+const priorTodayReview=await json('reports/today-design-review.json');
+const todayReview=wholeReview?.version===packageInfo.version?wholeReview:priorTodayReview?.version===packageInfo.version?priorTodayReview:null;
+const wholeCapturePacket=await json('reports/whole-ui-captures.json');
+const documentationReport=todayReview===wholeReview?'reports/whole-ui-documentation.md':'reports/today-design-documentation.md';
+const wholeScope=await json('reports/whole-ui-update-scope.json');
+const priorTodayScope=await json('reports/today-update-scope.json');
+const todayScope=wholeScope?.version===packageInfo.version?wholeScope:priorTodayScope?.version===packageInfo.version?priorTodayScope:null;
+const extraUICaptures=await Promise.all(['reports/whole-ui-surface-captures.json','reports/whole-ui-harmony-captures.json'].map(async path=>({path,stats:(await json(path))?.stats??null})));
+if(todayReview===wholeReview){for(const report of extraUICaptures){if(!report.stats?.expected||report.stats.unexpected||report.stats.flaky||report.stats.skipped)throw Error('补充界面截图检查缺失或未通过：'+report.path);}}
 if(todayReview){
   if(todayReview.disposition!=='ship')throw Error('今日界面修正项尚未全部通过审阅');
   for(const source of todayReview.sourceFiles??[]){if(hash(await readFile(source.path))!==source.sha256)throw Error('今日界面审阅记录与源码不一致：'+source.path);}
   for(const capture of todayReview.captures??[]){if(hash(await readFile(capture.path))!==capture.sha256)throw Error('今日界面截图审阅后发生变化：'+capture.path);}
-  await stat('reports/today-design-documentation.md');await stat('DESIGN.md');await stat('.impeccable/design.json');
+  await stat(documentationReport);await stat('DESIGN.md');await stat('.impeccable/design.json');
 }
+if(!todayReview)throw Error('当前版本缺少独立界面审阅记录，不能沿用旧版结论');
 if(timetableImportValidation){
   for(const source of timetableImportValidation.sourceFiles){if(hash(await readFile(source.path))!==source.sha256)throw Error('课表识别核对记录与当前源码不一致：'+source.path);}
 }
@@ -74,10 +84,11 @@ const summary={
   harmonyBridgeTests,
   androidJvmTests:{runThisUpdate:!harmonyOnly,passed:(android?.jvmRuleTests??0)+(android?.jvmStartupTests??0)+(android?.jvmResourceTests??0)+(android?.jvmClockTests??0),alarmTime:android?.jvmRuleTests??0,startupPage:android?.jvmStartupTests??0,resourcePolicy:android?.jvmResourceTests??0,systemClockDates:android?.jvmClockTests??0,scope:'Alarm date validation, bundled HTML startup, local resource handling and safe next-occurrence Clock handoff'},
   uiFunctionalTests:{passed:functional.length,failed:0,cases:functional.map(s=>s.title)},
-  uiCaptureTests:{passed:capture.length,failed:0},screenshots:ui.map(n=>'.impeccable/review/'+n+'.png'),
+  uiCaptureTests:{passed:capture.length,failed:0},screenshots:wholeCapturePacket?.version===packageInfo.version?wholeCapturePacket.captures.map(c=>c.path):ui.map(n=>'.impeccable/review/'+n+'.png'),
+  additionalUICaptureReports:extraUICaptures,
   designReview:todayReview??{...(harmonyOnly?harmonyUIReview:clockReview??{disposition:'pending'}),historical:true,currentUpdate:'Historical interface review; no current daily-home verdict available'},
-  harmonyPreviewCaptures:harmonyCaptures,
-  designDocumentation:todayReview?{historical:false,scope:'Daily-first blue interface extracted from current shared web implementation; no device UI or ringing certification',files:['DESIGN.md','.impeccable/design.json'],report:'reports/today-design-documentation.md'}:{incumbentVisualSystemPreserved:true,historical:true,scope:'Historical interface documentation',report:harmonyOnly?'reports/harmony-ui-documentation.md':'reports/clock-ui-documentation.md'},
+  harmonyPreviewCaptures:harmonyCaptures?{...harmonyCaptures,historical:true}:null,
+  designDocumentation:todayReview?{historical:false,scope:'Current shared interface and task-screen components; no device UI or ringing certification',files:['DESIGN.md','.impeccable/design.json'],report:documentationReport}:{incumbentVisualSystemPreserved:true,historical:true,scope:'Historical interface documentation',report:harmonyOnly?'reports/harmony-ui-documentation.md':'reports/clock-ui-documentation.md'},
   native:{
     harmony:harmony?.build==='success'?`${harmony.version??'unknown'} compiled; current build signed=${Boolean(signed?.signatureVerified&&signed?.unsignedSHA256===harmony.sha256)}; current build not installed or ringing-tested; previous signed package retained separately`:'not compiled',
     android:android?.officialSignatureVerification==='passed'?`${android.version} compiled, lint checked and debug signature/content verified; current APK installed=${Boolean(androidDevice?.installed)}, home confirmed=${Boolean(androidDevice?.homepageVerified)}, ringing tested=${Boolean(androidDevice?.lockScreenAlarmTested)}, ringing passed=${Boolean(androidDevice?.lockScreenAlarmPassed)}`:'not verified',

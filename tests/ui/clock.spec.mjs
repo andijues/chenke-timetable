@@ -102,6 +102,7 @@ test('关闭、暂停、切换或清空后持续提供已有时钟闹钟的管�
     if(action==='switch')await page.locator('#android-alarm-mode').selectOption('app');
     if(action==='clear'){
       await page.getByRole('button',{name:'设置',exact:true}).click();
+      await page.getByRole('tab',{name:'数据备份',exact:true}).click();
       page.once('dialog',async dialog=>{expect(dialog.message()).toContain('已经交给系统时钟的闹钟须到时钟中删除');await dialog.accept();});
       await page.getByRole('button',{name:'清空课表',exact:true}).click();
     }

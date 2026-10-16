@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {createState} from '../../src/core.mjs';
+import {mkdirSync} from 'node:fs';
 
 async function prepare(page,{granted=false,notifications=false,testFails=false}={}){
   const state=createState('2026-10-12');state.settings.enabled=true;
@@ -70,4 +71,14 @@ test('鸿蒙系统返回先保护未保存课程，再回课表；主页交还�
   await expect(page.locator('.schedule-panel')).toBeVisible();
   expect(await page.evaluate(()=>window.chenkeNativeBack())).toBe(false);
   await expect.poll(()=>page.evaluate(()=>window.__harmony.calls.filter(c=>c.action==='setBackState').at(-1)?.payload.handled)).toBe(false);
+});
+
+test('界面证据：鸿蒙提醒等待授权与测试错误的手机状态',async({browser})=>{
+  mkdirSync('.impeccable/review',{recursive:true});
+  for(const [name,options] of [['pending',{}],['error',{granted:true,notifications:true,testFails:true}]]){
+    const page=await browser.newPage({viewport:{width:390,height:844}});await prepare(page,options);
+    if(name==='error'){await page.getByRole('button',{name:'测试 1 分钟后响铃'}).click();await expect(page.locator('.harmony-feedback')).toContainText('1700002');}
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:`.impeccable/review/surfaces-harmony-${name}.png`,fullPage:true});await page.close();
+  }
 });
