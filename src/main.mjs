@@ -1,4 +1,4 @@
-import {uid,createState,makeDemo,weekdays,minutes,clock,dateParts,addDays,mondayOf,dayOfWeek,weekNumber,parseWeeks,formatWeeks,coursesOn,morningPlan,planAlarms,courseStatus,conflicts,validateCourse,validateState,icsExport,weeksForRule,periodsForDay,validatePeriods,resolveCourseTime,validDate} from './core.mjs';
+import {uid,createState,makeDemo,weekdays,minutes,clock,dateParts,addDays,mondayOf,dayOfWeek,weekNumber,parseWeeks,formatWeeks,coursesOn,morningPlan,planAlarms,courseStatus,conflicts,validateCourse,validateState,icsExport,weeksForRule,periodsForDay,validatePeriods,resolveCourseTime,validDate,applyCourseAdjustment} from './core.mjs';
 import {parseTimetable} from './parser.mjs';
 import {importDocument} from './importer.mjs';
 import {platform,callNative,capabilities,dispatchAlarms} from './bridge.mjs';
@@ -6,6 +6,7 @@ import {inferWeekRule,weekSummary,weeksEditor,coursePeriodControls,resizePeriods
 import {harmonyAuthorization} from './harmony-ui.mjs';
 import {homeDashboard,courseTimeline} from './home-ui.mjs';
 import {tomorrowClock,clockRequestKey} from './clock-policy.mjs';
+import {courseAdjustmentDraft,courseAdjustmentForm,adjustmentPreview,adjustmentsPanel} from './adjustments-ui.mjs';
 
 const KEY='chenke.state.v1'; const $=s=>document.querySelector(s);
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -19,6 +20,7 @@ let clockReceipt=null,clockAutoBusy=false;const clockAttempts=new Set();
 let syncFingerprint='', syncRunning=false, syncAgain=false, clockRequestBusy=false;
 let nativeTestFeedback=null, nativeTestBusy=false, nativeResumeTimer=null, editorInitial='';
 let periodDraft=null, periodScope='common', periodActive=0, settingsPanel='semester';
+let exceptionScope='course', adjustmentDraft=null;
 const root=$('#app');
 function updateMobileViewport(){
   const viewport=window.visualViewport;
@@ -91,7 +93,7 @@ function weekGrid(){
   const first=Math.min(7*60,Math.floor(Math.min(...times,...(showNow?[today.minute]:[]),7*60)/60)*60),last=Math.max(22*60,Math.ceil(Math.max(...times,...(showNow?[today.minute]:[]),22*60)/60)*60);
   const lines=[];for(let t=first;t<=last;t+=60)lines.push(`<div class="hour-row" style="top:${(t-first)/(last-first)*100}%"><span>${clock(t)}</span></div>`);
   const cells=Array.from({length:cols},(_,i)=>{
-    const date=addDays(monday,i);const courses=coursesOn(state,date);return `<div class="day-column ${today.date===date?'is-today':''}" style="--day:${i}">${courses.map(c=>{const start=Math.max(first,minutes(c.start)),end=Math.min(last,minutes(c.end));if(end<=start)return '';return `<button class="course-block ${escape(c.color??'mint')} ${c.confirmed?'':'unconfirmed'}" data-edit="${escape(c.id)}" style="top:${(start-first)/(last-first)*100}%;height:${(end-start)/(last-first)*100}%" aria-label="编辑 ${escape(c.name)}，${c.start} 至 ${c.end}"><strong>${escape(c.name)}</strong><span>${escape(c.location||'地点待补充')}</span><small>${c.start}–${c.end}${c.confirmed?'':' · 待确认'}</small></button>`;}).join('')}</div>`;
+    const date=addDays(monday,i);const courses=coursesOn(state,date);return `<div class="day-column ${today.date===date?'is-today':''}" style="--day:${i}">${courses.map(c=>{const start=Math.max(first,minutes(c.start)),end=Math.min(last,minutes(c.end));if(end<=start)return '';return `<button class="course-block ${escape(c.color??'mint')} ${c.confirmed?'':'unconfirmed'}" ${c.adjustmentId?`data-adjustment="${escape(c.adjustmentId)}"`:`data-edit="${escape(c.id)}"`} style="top:${(start-first)/(last-first)*100}%;height:${(end-start)/(last-first)*100}%" aria-label="编辑 ${escape(c.name)}，${c.start} 至 ${c.end}"><strong>${escape(c.name)}</strong><span>${escape(c.location||'地点待补充')}</span><small>${c.start}–${c.end}${c.confirmed?'':' · 待确认'}</small></button>`;}).join('')}</div>`;
   }).join('');
   const position=(today.minute-first)/(last-first)*100;
   const pointer=showNow?`<div class="time-pointer" style="top:${position}%;--today:${todayIndex}" aria-label="现在 ${today.time}"><i></i><b></b></div>`:'';
@@ -150,7 +152,7 @@ function settingsView(){
   ${pane('semester','学期与时间','',`<form id="settings-form" class="settings-form"><label>第 1 周开始上课的日期<input name="week1" type="date" value="${s.semesterStart??s.week1}" required><small>以该周周一作为第 1 周起点。</small></label><label>学期周数<input name="totalWeeks" type="number" inputmode="numeric" min="1" max="60" value="${s.totalWeeks}" required></label><label>上午结束时间<input name="morningEnd" type="time" value="${s.morningEnd}" required><small>首课早于此刻才计入晨课。</small></label><p id="semester-preview" class="semester-preview">${escape(semesterPreview())}</p><button class="button" type="submit">保存学期设置</button></form>`)}
   ${pane('periods','每天的节次与时间','',`<div id="period-editor">${periodsEditor(periodDraft,periodScope,periodActive)}</div>`)}
   ${pane('courses','课程管理',`${state.courses.length} 门课程`,`<div class="management-toolbar"><button class="button secondary compact" data-action="add">${icon('plus')}添加课程</button></div><div class="course-management">${state.courses.length?[...state.courses].sort((a,b)=>a.day-b.day||minutes(a.start)-minutes(b.start)).map(c=>{const time=resolveCourseTime(c,s);return `<button class="managed-course" data-edit="${escape(c.id)}"><span class="course-color ${escape(c.color??'mint')}"></span><span><strong>${escape(c.name)}</strong><small>${weekdays[c.day-1]} · ${time.start}–${time.end}${c.periodRange?` · 第${c.periodRange.start}–${c.periodRange.end}节`:''}</small><small>${c.date?c.date+' · 单次课程':escape(formatWeeks(c.weeks))}${c.confirmed?'':' · 待确认'}</small></span>${icon('arrow')}</button>`;}).join(''):`<div class="management-empty">${icon('book')}<strong>还没有课程</strong><p>添加一门课程，或导入 PDF 后逐门校对。</p></div>`}</div>`)}
-  ${pane('exceptions','停课、放假与调课','',`<form id="exception-form" class="exception-form"><label>日期<input type="date" name="date" required></label><label>安排<select name="type"><option value="skip">这天停课 / 放假</option><option value="replaceDay">按其他星期上课</option></select></label><label>调课到<select name="day">${weekdays.map((d,i)=>`<option value="${i+1}">${d}</option>`).join('')}</select></label><label>备注<input name="note" maxlength="100" placeholder="例如：国庆停课"></label><button class="button secondary" type="submit">${icon('plus')}添加例外日期</button></form><div class="exception-list">${state.exceptions.length?state.exceptions.map((e,i)=>`<div><span><strong>${e.date}</strong> ${e.type==='skip'?'停课 / 放假':e.type==='cancelCourse'?'单门停课':`按${weekdays[e.day-1]}上课`}<small>${escape(e.note??'')}</small></span><button class="icon-button" data-delete-exception="${i}" aria-label="删除 ${e.date} 例外">${icon('close')}</button></div>`).join(''):'<p class="helper">还没有例外日期。单次补课可在添加课程时指定日期。</p>'}</div>`)}
+  ${pane('exceptions','停课与调课','',adjustmentsPanel(state,adjustmentDraft??=courseAdjustmentDraft(state,selected),exceptionScope))}
   ${pane('data','数据与备份','课表仅保存在本机，建议定期备份。',`<div class="backup-actions"><button class="backup-action" data-action="backup">${icon('download')}<span><strong>导出课表备份</strong><small>保存课程、学期和节次 · JSON</small></span>${icon('arrow')}</button><label class="backup-action restore-label">${icon('upload')}<span><strong>恢复备份</strong><small>用已有 JSON 备份替换当前课表</small></span>${icon('arrow')}<input id="restore-input" type="file" accept="application/json,.json"></label><button class="backup-action" data-action="ics">${icon('calendar')}<span><strong>导出课程日历</strong><small>ICS 文件 · 不包含起床闹钟</small></span>${icon('arrow')}</button></div><div class="danger-zone"><div><strong>清空本机课表</strong><p>操作前建议导出备份；外部时钟闹钟需单独删除。</p></div><button class="text-button danger" data-action="clear">${icon('trash')}清空课表</button></div>`)}
   </div>`;
 }
@@ -158,6 +160,20 @@ function selectSettingsPanel(panel,focus=false){
   settingsPanel=panel;
   document.querySelectorAll('[data-settings-panel]').forEach(tab=>{const active=tab.dataset.settingsPanel===panel;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;if(active&&focus)tab.focus();});
   document.querySelectorAll('.settings-pane').forEach(pane=>pane.hidden=pane.id!=='settings-pane-'+panel);
+}
+
+function refreshAdjustmentForm(focusName){
+  $('#single-course-adjustment').innerHTML=courseAdjustmentForm(state,adjustmentDraft);
+  if(focusName)$('#course-adjustment-form').elements[focusName]?.focus();
+}
+function readAdjustmentDraft(form){
+  adjustmentDraft={...adjustmentDraft,...Object.fromEntries(new FormData(form))};
+}
+function openAdjustment(index){
+  const record=state.exceptions[index];if(!record)return;
+  adjustmentDraft=courseAdjustmentDraft(state,record.date,record.courseId);
+  exceptionScope='course';settingsPanel='exceptions';route='settings';render();window.scrollTo(0,0);
+  $('#course-adjustment-form').elements.courseId.focus({preventScroll:true});
 }
 
 function periodList(edit=false){
@@ -247,14 +263,17 @@ function download(name,text,type='application/json'){if(platform()!=='web'){call
 document.addEventListener('click',async event=>{
   const b=event.target.closest('button,a');if(!b)return;
   if(b.dataset.settingsPanel){selectSettingsPanel(b.dataset.settingsPanel);return;}
+  if(b.dataset.exceptionScope){exceptionScope=b.dataset.exceptionScope;document.querySelectorAll('[data-exception-scope]').forEach(button=>{const active=button.dataset.exceptionScope===exceptionScope;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});$('#single-course-adjustment').hidden=exceptionScope!=='course';$('#whole-day-adjustment').hidden=exceptionScope!=='day';return;}
+  if(b.dataset.editAdjustment!==undefined){openAdjustment(+b.dataset.editAdjustment);return;}
+  if(b.dataset.adjustment){openAdjustment(state.exceptions.findIndex(e=>e.id===b.dataset.adjustment));return;}
   if(b.dataset.route){route=b.dataset.route;render();window.scrollTo(0,0);return;}
   if(b.dataset.view){view=b.dataset.view;render();return;}
   if(b.dataset.date){selected=b.dataset.date;view='day';render();return;}
   if(b.dataset.edit){openEditor(b.dataset.edit);return;}
   if(b.dataset.review){openEditor(b.dataset.review,true);return;}
   if(b.dataset.removeReview){importResult.courses=importResult.courses.filter(c=>c.id!==b.dataset.removeReview);$('#course-dialog').close();render();return;}
-  if(b.dataset.deleteCourse){if(confirm('删除这门课程？对应的起床计划会重新计算。')){state.courses=state.courses.filter(c=>c.id!==b.dataset.deleteCourse);$('#course-dialog').close();save();}return;}
-  if(b.dataset.deleteException!==undefined){state.exceptions.splice(+b.dataset.deleteException,1);save();return;}
+  if(b.dataset.deleteCourse){if(confirm('删除这门课程？对应的起床计划会重新计算。')){state.courses=state.courses.filter(c=>c.id!==b.dataset.deleteCourse);state.exceptions=state.exceptions.filter(e=>e.courseId!==b.dataset.deleteCourse);adjustmentDraft=null;$('#course-dialog').close();save();}return;}
+  if(b.dataset.deleteException!==undefined){const record=state.exceptions.splice(+b.dataset.deleteException,1)[0];if(adjustmentDraft&&record?.courseId===adjustmentDraft.courseId&&record.date===adjustmentDraft.date)adjustmentDraft=courseAdjustmentDraft(state,record.date,record.courseId);save();toast('已撤销调整，课程与起床计划已更新');return;}
   if(b.dataset.weekPattern){updateWeeksFromRange(b.dataset.weekPattern);return;}
   if(b.dataset.week){const form=$('#course-form'),weeks=parseWeeks(form.elements.weeks.value,state.settings.totalWeeks),week=+b.dataset.week;const next=weeks.includes(week)?weeks.filter(w=>w!==week):[...weeks,week].sort((a,b)=>a-b);applyWeekSelection(next,{...inferWeekRule(next,state.settings.totalWeeks),pattern:'custom'});return;}
   if(b.dataset.timeMode){$('#course-form').elements.timeMode.value=b.dataset.timeMode;refreshCourseTiming();return;}
@@ -263,8 +282,8 @@ document.addEventListener('click',async event=>{
   switch(b.dataset.action){
     case'import':route='import';render();window.scrollTo(0,0);break;
     case'settings-periods':settingsPanel='periods';route='settings';render();window.scrollTo(0,0);break;
-    case'demo':state=makeDemo();periodDraft=null;save();break;
-    case'new':state=createState();periodDraft=null;selected=dateParts().date;save();break;
+    case'demo':state=makeDemo();periodDraft=null;adjustmentDraft=null;save();break;
+    case'new':state=createState();periodDraft=null;adjustmentDraft=null;selected=dateParts().date;save();break;
     case'add':openEditor();break;
     case'add-import':openEditor(null,true);break;
     case'close-dialog':$('#course-dialog').close();break;
@@ -273,10 +292,10 @@ document.addEventListener('click',async event=>{
     case'today':selected=dateParts().date;render();requestAnimationFrame(()=>$('.time-pointer')?.scrollIntoView({behavior:'smooth',block:'center'}));break;
     case'all-days':showAllDays=!showAllDays;render();break;
     case'parse-text':{const text=$('#paste-text').value;if(!text.trim()){toast('请先粘贴课表文字');break;}importResult={...parseTimetable({text},state.settings),name:'粘贴文字',kind:'text'};render();requestAnimationFrame(()=>$('.review-section')?.scrollIntoView({block:'start'}));break;}
-    case'commit-import':{if(!importResult?.courses.length)break;if(state.demo){state.courses=[];state.demo=false;}const keys=new Set(state.courses.map(c=>[c.name,c.day,c.start,c.end,c.weeks.join(',')].join('|')));let added=0;for(const c of importResult.courses){const key=[c.name,c.day,c.start,c.end,c.weeks.join(',')].join('|');if(!keys.has(key)){state.courses.push(c);keys.add(key);added++;}}importResult=null;route='home';save();toast(`已加入 ${added} 门课程，点击课程可校对并确认`);break;}
+    case'commit-import':{if(!importResult?.courses.length)break;if(state.demo){state.courses=[];state.exceptions=[];adjustmentDraft=null;state.demo=false;}const keys=new Set(state.courses.map(c=>[c.name,c.day,c.start,c.end,c.weeks.join(',')].join('|')));let added=0;for(const c of importResult.courses){const key=[c.name,c.day,c.start,c.end,c.weeks.join(',')].join('|');if(!keys.has(key)){state.courses.push(c);keys.add(key);added++;}}importResult=null;route='home';save();toast(`已加入 ${added} 门课程，点击课程可校对并确认`);break;}
     case'backup':download(`晨课备份-${dateParts().date}.json`,JSON.stringify(state,null,2));break;
     case'ics':download('晨课课程.ics',icsExport(state,state.settings.week1,state.settings.totalWeeks*7),'text/calendar');break;
-    case'clear':if(confirm('将清空所有课程和设置，并请求取消晨课管理的提醒。已经交给系统时钟的闹钟须到时钟中删除。建议先导出备份。')){state=createState();periodDraft=null;save();toast('课表已清空');}break;
+    case'clear':if(confirm('将清空所有课程和设置，并请求取消晨课管理的提醒。已经交给系统时钟的闹钟须到时钟中删除。建议先导出备份。')){state=createState();periodDraft=null;adjustmentDraft=null;save();toast('课表已清空');}break;
     case'period-inherit':delete periodDraft.periodsByDay[periodScope];refreshPeriods();break;
     case'sync':try{if(platform()==='harmony'){const c=await callNative('requestPermissions');updateNativeCaps(c);if(c.reminderGranted===false){nativeStatus=c;render();break;}}if(platform()==='android'&&!androidClockMode()){const c=await callNative('requestPermissions');if(!c.exactAllowed||!c.notificationsAllowed){toast(c.message);break;}}await sync(true);render();}catch(e){toast(e.message);}break;
     case'clock-pause':{const date=addDays(dateParts().date,1),dates=state.settings.alarmSkippedDates??[];state.settings.alarmSkippedDates=dates.includes(date)?dates.filter(d=>d!==date):[...dates.filter(d=>d>=dateParts().date).slice(-59),date];save();toast('已更新自动发送设置；已发送的闹钟请在系统时钟中管理');break;}
@@ -294,6 +313,7 @@ document.addEventListener('keydown',event=>{
 
 document.addEventListener('input',event=>{
   const el=event.target;
+  if(el.closest('#course-adjustment-form')&&!['date','courseId','type'].includes(el.name)){readAdjustmentDraft(el.form);$('#course-adjustment-preview').innerHTML=adjustmentPreview(state,adjustmentDraft);$('#adjustment-error').textContent='';}
   if(el.id==='lead-slider'){const value=+el.value;$('#lead-value').textContent=value;$('#lead-input').value=value;}
   if(el.closest('#settings-form')&&['week1','totalWeeks'].includes(el.name))$('#semester-preview').textContent=semesterPreview();
   if(el.dataset.periodIndex!==undefined){const periods=periodList(true);periods[+el.dataset.periodIndex][el.dataset.periodPart]=el.value;periodActive=+el.dataset.periodIndex;refreshPeriodPreview();}
@@ -301,6 +321,8 @@ document.addEventListener('input',event=>{
 });
 document.addEventListener('change',async event=>{
   const el=event.target;
+  if(el.closest('#course-adjustment-form')){if(el.name==='date'){adjustmentDraft=courseAdjustmentDraft(state,el.value);refreshAdjustmentForm('date');}else if(el.name==='courseId'){adjustmentDraft=courseAdjustmentDraft(state,adjustmentDraft.date,el.value);refreshAdjustmentForm('courseId');}else if(el.name==='type'){adjustmentDraft.type=el.value;refreshAdjustmentForm('type');}return;}
+  if(el.closest('#exception-form')&&el.name==='type'){const show=el.value==='replaceDay';$('#exception-day-label').hidden=!show;el.form.elements.day.disabled=!show;return;}
   if(el.id==='view-week'){const week=+el.value;selected=week?addDays(state.settings.week1,(week-1)*7+dayOfWeek(selected)-1):dateParts().date;render();return;}
   if(el.id==='period-scope'){periodScope=el.value;periodActive=0;refreshPeriods();return;}
   if(el.id==='period-count'){const count=+el.value;if(!Number.isInteger(count)||count<(periodScope==='common'?1:0)||count>20){$('#period-error').textContent='通用表1-20节，单独设置的星期0-20节。';return;}const periods=resizePeriods(periodList(),count);if(periodScope==='common')periodDraft.periods=periods;else periodDraft.periodsByDay[periodScope]=periods;refreshPeriods();return;}
@@ -315,7 +337,7 @@ document.addEventListener('change',async event=>{
   if(el.id==='file-input')processFile(el.files[0]);
   if(el.id==='alarm-enabled'){state.settings.enabled=el.checked;save();}
   if(el.id==='lead-slider'||el.id==='lead-input'){const n=+el.value;if(!Number.isInteger(n)||n<0||n>1440){toast('提前量请输入 0-1440 分钟');return;}state.settings.leadMinutes=n;save();}
-  if(el.id==='restore-input'&&el.files[0]){try{if(el.files[0].size>5*1024*1024)throw Error('备份文件超过 5 MB');const next=validateState(JSON.parse(await el.files[0].text()));if(confirm('用备份替换当前课表？请先保存现有记录。')){state=next;periodDraft=null;state.settings.enabled=false;save();toast('备份已恢复，请检查后重新启用闹钟');}}catch(e){toast(`恢复失败：${e.message}`);}}
+  if(el.id==='restore-input'&&el.files[0]){try{if(el.files[0].size>5*1024*1024)throw Error('备份文件超过 5 MB');const next=validateState(JSON.parse(await el.files[0].text()));if(confirm('用备份替换当前课表？请先保存现有记录。')){state=next;periodDraft=null;adjustmentDraft=null;state.settings.enabled=false;save();toast('备份已恢复，请检查后重新启用闹钟');}}catch(e){toast(`恢复失败：${e.message}`);}}
 });
 document.addEventListener('submit',event=>{
   event.preventDefault();const form=event.target;const d=Object.fromEntries(new FormData(form));
@@ -333,7 +355,8 @@ document.addEventListener('submit',event=>{
   }
   if(form.id==='settings-form'){const candidate=structuredClone(state);candidate.settings={...candidate.settings,week1:mondayOf(d.week1),semesterStart:d.week1,totalWeeks:+d.totalWeeks,morningEnd:d.morningEnd};try{validateState(candidate);state=candidate;save();toast('学期设置已保存，课程与起床计划已重新计算');}catch(e){toast(e.message);}return;}
   if(form.id==='periods-form'){const candidate=structuredClone(state);candidate.settings.periods=structuredClone(periodDraft.periods);candidate.settings.periodsByDay=structuredClone(periodDraft.periodsByDay);try{const next=validateState(candidate);next.courses=next.courses.map(c=>resolveCourseTime(c,next.settings));state=next;periodDraft=null;save();toast('节次已保存，按节次录入的课程与起床计划已更新');}catch(e){$('#period-error').textContent=e.message;}return;}
-  if(form.id==='exception-form'){state.exceptions=state.exceptions.filter(e=>e.date!==d.date||e.type==='cancelCourse');state.exceptions.push({date:d.date,type:d.type,day:+d.day,note:d.note});state.exceptions.sort((a,b)=>a.date.localeCompare(b.date));save();toast('例外日期已保存');}
+  if(form.id==='course-adjustment-form'){readAdjustmentDraft(form);try{state=applyCourseAdjustment(state,adjustmentDraft);save();toast('本次课程已调整，起床计划已更新');}catch(error){$('#adjustment-error').textContent=error.message;$('#course-adjustment-preview .adjustment-instruction')?.remove();}return;}
+  if(form.id==='exception-form'){const candidate=structuredClone(state);candidate.exceptions=candidate.exceptions.filter(e=>e.date!==d.date||!['skip','replaceDay'].includes(e.type));candidate.exceptions.push({date:d.date,type:d.type,...(d.type==='replaceDay'?{day:+d.day}:{}),note:d.note});candidate.exceptions.sort((a,b)=>a.date.localeCompare(b.date));try{state=validateState(candidate);save();toast('整天安排已保存，起床计划已更新');}catch(error){$('#exception-error').textContent=error.message;}}
 });
 document.addEventListener('dragover',event=>{if(event.target.closest('.dropzone'))event.preventDefault();});
 document.addEventListener('drop',event=>{if(event.target.closest('.dropzone')){event.preventDefault();processFile(event.dataTransfer.files[0]);}});

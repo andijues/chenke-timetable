@@ -2091,3 +2091,36 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 .usage-help .text-button{margin-top:8px}
 .management-toolbar{justify-content:flex-end}
 .schedule-foot{justify-content:flex-end}
+
+/* Individual adjustments use the same form and action vocabulary as settings. */
+.adjustment-scopes{display:inline-flex;margin-bottom:26px}
+.adjustment-scopes button{min-height:44px;min-width:112px}
+.course-adjustment-form>.adjustment-course-label,.course-adjustment-form>.adjustment-type-label,
+.course-adjustment-form>.adjustment-note,.adjustment-feedback,.course-adjustment-form>.form-error{grid-column:1/-1;min-width:0}
+.course-adjustment-form .adjustment-course-label select{width:100%;text-overflow:ellipsis}
+.adjustment-target{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px 20px;min-width:0;border:0;padding:20px 0 0;margin:0;border-top:1px solid var(--line)}
+.adjustment-target[hidden]{display:none}.adjustment-target legend{font-size:16px;font-weight:650;padding:0 10px 0 0;color:var(--ink)}
+.adjustment-target label{min-width:0;font-size:14px;line-height:1.7;color:var(--ink)}
+.adjustment-target-date,.adjustment-target-location{grid-column:1/-1}
+.adjustment-feedback:empty,.course-adjustment-form>.form-error:empty{display:none}
+.adjustment-preview{background:var(--soft);border-radius:10px;padding:4px 16px;color:var(--ink);font-size:14px;line-height:1.8}
+.adjustment-preview-row{display:grid;grid-template-columns:148px minmax(0,1fr);gap:18px;padding:12px 0;align-items:start}
+.adjustment-preview-row+.adjustment-preview-row{border-top:1px solid var(--line)}
+.adjustment-preview-row>span{color:var(--muted)}.adjustment-preview-row strong{font-weight:600;overflow-wrap:anywhere}
+.adjustment-preview-row strong>span:not(.adjustment-arrow){display:block;font-weight:400}.adjustment-arrow{color:var(--muted);padding-inline:4px}
+.adjustment-instruction{font-size:14px;line-height:1.8;padding-bottom:12px;color:var(--muted)}
+.adjustment-warning{font-size:14px;line-height:1.8;color:var(--danger);margin-top:12px;overflow-wrap:anywhere}
+.adjustment-history{margin-top:34px;padding-top:24px;border-top:1px solid var(--line)}
+.adjustment-history h3{font-size:16px;line-height:1.6;font-weight:650;margin:0}.adjustment-history .exception-list{margin-top:8px}
+.exception-list>.adjustment-record{display:flex;justify-content:space-between;gap:18px;align-items:start;padding-block:18px}
+.adjustment-record-copy{min-width:0;flex:1;overflow-wrap:anywhere}.exception-list .adjustment-record-copy strong{font-size:16px;line-height:1.7;display:block}
+.adjustment-record-copy>span{display:block;font-size:14px;line-height:1.8;margin-top:4px;font-variant-numeric:tabular-nums}
+.exception-list .adjustment-record-copy small{display:block;color:var(--muted);margin-top:4px}
+.adjustment-record-actions{display:flex;gap:8px;flex-shrink:0}.adjustment-record-actions .text-button{min-width:52px;min-height:44px}
+.adjustment-empty{font-size:14px;color:var(--muted);padding-top:16px;line-height:1.8}
+@media(max-width:760px),(max-width:1000px) and (max-height:500px),(hover:none) and (pointer:coarse){
+  .adjustment-scopes{display:flex;margin-bottom:24px}.adjustment-scopes button{flex:1;min-width:0}
+  .adjustment-target{gap:18px 12px}.adjustment-preview{padding-inline:12px}
+  .adjustment-preview-row{grid-template-columns:minmax(0,1fr);gap:4px;padding-block:12px}
+  .exception-list>.adjustment-record{display:block}.adjustment-record-actions{justify-content:flex-end;margin-top:8px}
+}

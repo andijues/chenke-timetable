@@ -105,20 +105,69 @@ export function validateState(raw) {
     if (c.periodRange && c.periodRange.end > periodsForDay(s, c.day).length) throw Error(`${c.name} 使用第 ${c.periodRange.end} 节，请先保留该节次或修改课程`);
     ids.add(c.id);
   }
-  for (const e of raw.exceptions) if (!validDate(e.date) || !['skip', 'replaceDay', 'cancelCourse'].includes(e.type) || (e.type === 'replaceDay' && (!Number.isInteger(e.day) || e.day < 1 || e.day > 7))) throw Error('例外日期格式不正确');
+  const adjustmentIds = new Set(), occurrences = new Set();
+  for (const e of raw.exceptions) {
+    if (!e || !validDate(e.date) || !['skip', 'replaceDay', 'cancelCourse', 'moveCourse'].includes(e.type) || (e.type === 'replaceDay' && (!Number.isInteger(e.day) || e.day < 1 || e.day > 7))) throw Error('例外日期格式不正确');
+    if (e.note !== undefined && (typeof e.note !== 'string' || e.note.length > 100)) throw Error('调课备注不能超过 100 字');
+    if (['cancelCourse', 'moveCourse'].includes(e.type)) {
+      if (typeof e.courseId !== 'string' || !ids.has(e.courseId)) throw Error('单门调课引用的课程不存在');
+      const key = JSON.stringify([e.date, e.courseId]);
+      if (occurrences.has(key)) throw Error('同一次课程只能保留一个调整');
+      occurrences.add(key);
+    }
+    if (e.type === 'moveCourse') {
+      if (typeof e.id !== 'string' || !e.id || ids.has(e.id) || adjustmentIds.has(e.id)) throw Error('单门调课记录编号无效或重复');
+      adjustmentIds.add(e.id);
+      if (!validDate(e.targetDate) || !Number.isFinite(minutes(e.start)) || !Number.isFinite(minutes(e.end)) || minutes(e.end) <= minutes(e.start)) throw Error('调课日期或起止时间不正确');
+      if (e.location !== undefined && (typeof e.location !== 'string' || e.location.length > 160)) throw Error('调课地点不能超过 160 字');
+    }
+  }
   return structuredClone(raw);
 }
-export function coursesOn(state, date, {confirmedOnly = false} = {}) {
+// Original occurrences, before individual adjustments. A day off does not erase
+// the source of an already recorded move to a different date.
+export function adjustableCoursesOn(state, date) {
+  if (!validDate(date)) return [];
   const week = weekNumber(date, state.settings.week1);
   const exception = state.exceptions.filter(e => e.date === date);
-  if (exception.some(e => e.type === 'skip')) return [];
   const day = exception.find(e => e.type === 'replaceDay')?.day ?? dayOfWeek(date);
   return state.courses.filter(c => {
-    if (confirmedOnly && !c.confirmed) return false;
-    if (exception.some(e => e.type === 'cancelCourse' && e.courseId === c.id)) return false;
     if (c.date) return c.date === date;
     return date >= (state.settings.semesterStart ?? state.settings.week1) && week >= 1 && week <= state.settings.totalWeeks && c.day === day && c.weeks.includes(week);
   }).map(c => resolveCourseTime(c, state.settings)).sort((a, b) => minutes(a.start) - minutes(b.start) || a.name.localeCompare(b.name, 'zh'));
+}
+export function coursesOn(state, date, {confirmedOnly = false} = {}) {
+  if (state.exceptions.some(e => e.date === date && e.type === 'skip')) return [];
+  const adjustments = state.exceptions.filter(e => e.date === date && ['cancelCourse', 'moveCourse'].includes(e.type));
+  const regular = adjustableCoursesOn(state, date).filter(c => !adjustments.some(e => e.courseId === c.id));
+  const incoming = state.exceptions.filter(e => e.type === 'moveCourse' && e.targetDate === date).flatMap(e => {
+    const source = adjustableCoursesOn(state, e.date).find(c => c.id === e.courseId);
+    if (!source) return [];
+    return [{...source, id:e.id, sourceCourseId:source.id, adjustmentId:e.id, rescheduledFrom:e.date,
+      date, day:dayOfWeek(date), start:e.start, end:e.end, location:e.location ?? source.location, periodRange:undefined}];
+  });
+  return [...regular, ...incoming].filter(c => !confirmedOnly || c.confirmed)
+    .sort((a,b) => minutes(a.start) - minutes(b.start) || a.name.localeCompare(b.name, 'zh'));
+}
+export function applyCourseAdjustment(state, input) {
+  if (!validDate(input.date)) throw Error('请选择原上课日期');
+  if (!['cancelCourse', 'moveCourse'].includes(input.type)) throw Error('请选择单次停课或调整日期和时间');
+  const source = adjustableCoursesOn(state, input.date).find(c => c.id === input.courseId);
+  if (!source) throw Error('原日期没有这门课，请重新选择课程');
+  const prior = state.exceptions.find(e => e.date === input.date && e.courseId === input.courseId && ['cancelCourse', 'moveCourse'].includes(e.type));
+  const adjustment = {id:prior?.id ?? uid(), type:input.type, date:input.date, courseId:source.id, note:String(input.note ?? '').trim()};
+  if (input.type === 'moveCourse') {
+    if (!validDate(input.targetDate)) throw Error('请选择调整后的上课日期');
+    if (state.exceptions.some(e => e.date === input.targetDate && e.type === 'skip')) throw Error('目标日期已设整天停课，请先撤销该日的整天停课或更换日期');
+    if (!Number.isFinite(minutes(input.start)) || !Number.isFinite(minutes(input.end)) || minutes(input.end) <= minutes(input.start)) throw Error('调整后的结束时间应晚于开始时间');
+    Object.assign(adjustment, {targetDate:input.targetDate, start:input.start, end:input.end, location:String(input.location ?? source.location ?? '').trim()});
+    if (input.targetDate === input.date && input.start === source.start && input.end === source.end && adjustment.location === (source.location ?? '')) throw Error('日期、时间和地点未改变；要恢复原课请撤销这条调整');
+  }
+  const candidate = structuredClone(state);
+  candidate.exceptions = candidate.exceptions.filter(e => !(e.date === input.date && e.courseId === source.id && ['cancelCourse', 'moveCourse'].includes(e.type)));
+  candidate.exceptions.push(adjustment);
+  candidate.exceptions.sort((a,b) => a.date.localeCompare(b.date));
+  return validateState(candidate);
 }
 export function conflicts(courses) {
   const pairs = [];

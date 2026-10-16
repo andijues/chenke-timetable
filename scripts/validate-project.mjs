@@ -7,7 +7,7 @@ const essential=['dist/index.html','dist/app.js','dist/style.css','native/harmon
 const files=[];
 essential.push('src/harmony-ui.mjs','native/harmony/entry/src/main/ets/HarmonyBridge.ets','native/harmony/entry/src/main/ets/entryability/EntryAbility.ets');
 essential.push('src/main.mjs','src/home-ui.mjs','src/clock-policy.mjs','native/android/app/src/main/java/com/andijues/chenke/SystemClock.java','native/android/app/src/main/java/com/andijues/chenke/ClockTime.java');
-essential.push('src/schedule-ui.mjs','index.html');
+essential.push('src/schedule-ui.mjs','src/core.mjs','src/adjustments-ui.mjs','index.html');
 for(const path of essential){const bytes=await readFile(path);files.push({path,bytes:bytes.length,sha256:hash(bytes)});}
 const ui=['schedule-desktop-settings','schedule-phone-settings','schedule-user-500-settings','schedule-desktop-course','schedule-phone-course','schedule-user-500-course','schedule-desktop-home','schedule-phone-home','schedule-user-500-home'];
 ui.push('redesign-today-desktop','redesign-today-phone','redesign-today-small','redesign-today-dark','clock-phone','clock-user-500','clock-notice-off','clock-notice-pause','clock-notice-switch','clock-notice-clear');
@@ -35,8 +35,10 @@ const wholeReview=await json('reports/whole-ui-review.json');
 const priorTodayReview=await json('reports/today-design-review.json');
 const copyReview=await json('reports/copy-review.json');
 const navigationReview=await json('reports/navigation-review.json');
-const refinementReview=[copyReview,navigationReview].find(review=>review?.version===packageInfo.version);
-const refinementOnly=Boolean(refinementReview),refinementPrefix=refinementReview===copyReview?'copy':'navigation';
+const adjustmentsReview=await json('reports/adjustments-review.json');
+const refinementReview=[adjustmentsReview,copyReview,navigationReview].find(review=>review?.version===packageInfo.version);
+const refinementOnly=Boolean(refinementReview),refinementPrefix=refinementReview===adjustmentsReview?'adjustments':refinementReview===copyReview?'copy':'navigation';
+const courseAdjustments=refinementOnly&&refinementPrefix==='adjustments';
 const refinementChecks=refinementOnly?await json(`reports/${refinementPrefix}-ui-checks.json`):null;
 if(refinementOnly&&(!refinementChecks?.passed||refinementChecks.failed))throw Error('局部界面检查缺失或失败');
 const todayReview=refinementOnly?refinementReview:wholeReview?.version===packageInfo.version?wholeReview:priorTodayReview?.version===packageInfo.version?priorTodayReview:null;
@@ -72,7 +74,7 @@ if(signed?.deviceInstalled&&!currentHarmonyLaunch)throw Error('新版 HAP 不能
 if(android?.deviceInstalled&&!androidDevice?.installed)throw Error('Android 安装结论需要对应安装包的用户确认');
 if(android?.lockScreenAlarmTested&&!androidDevice?.lockScreenAlarmTested)throw Error('Android 响铃结论需要对应安装包的设备验收');
 if(android?.lockScreenAlarmPassed&&!androidDevice?.lockScreenAlarmPassed)throw Error('Android 响铃通过需要对应安装包的成功测试');
-const uiReport=await json('reports/ui-results.json');
+const uiReport=await json(courseAdjustments?'reports/adjustments-functional-results.json':'reports/ui-results.json');
 function specifications(suites){return suites.flatMap(s=>[...(s.specs??[]),...specifications(s.suites??[])]);}
 const specs=specifications(uiReport.suites);
 const capture=specs.filter(s=>s.title.startsWith('界面证据：'));
@@ -85,14 +87,14 @@ if(!corePassed||coreFailed!==0)throw Error('规则检查记录缺失或失败');
 const summary={
   date:new Date().toISOString(),version:packageInfo.version,build:'passed',
   supportedPlatforms:['android','harmony'],
-  scope:refinementOnly?'Current scoped UI refinement browser checks and both native compilations/JVM checks; prior full functional/core checks explicitly retained as history':harmonyOnly?'Current Harmony native compilation, actual ArkTS bridge logic with stubbed OS services and shared web browser tests; Android package and device results retained as historical evidence':'Shared interface browser checks, simulated native bridges, JVM Android startup/resource/alarm checks and native compilation; phone compatibility results recorded per APK hash',
+  scope:courseAdjustments?'Current per-course scheduling rules, full shared-browser functional regression and responsive captures, both native compilations and JVM checks; no device certification':refinementOnly?'Current scoped UI refinement browser checks and both native compilations/JVM checks; prior full functional/core checks explicitly retained as history':harmonyOnly?'Current Harmony native compilation, actual ArkTS bridge logic with stubbed OS services and shared web browser tests; Android package and device results retained as historical evidence':'Shared interface browser checks, simulated native bridges, JVM Android startup/resource/alarm checks and native compilation; phone compatibility results recorded per APK hash',
   updateTarget:harmonyOnly?'harmony':'android-harmony',
-  coreTests:{passed:corePassed,failed:coreFailed,historical:refinementOnly},
+  coreTests:{passed:corePassed,failed:coreFailed,historical:refinementOnly&&!courseAdjustments},
   harmonyBridgeTests:harmonyBridgeTests?{...harmonyBridgeTests,historical:refinementOnly}:null,
   androidJvmTests:{runThisUpdate:!harmonyOnly,passed:(android?.jvmRuleTests??0)+(android?.jvmStartupTests??0)+(android?.jvmResourceTests??0)+(android?.jvmClockTests??0),alarmTime:android?.jvmRuleTests??0,startupPage:android?.jvmStartupTests??0,resourcePolicy:android?.jvmResourceTests??0,systemClockDates:android?.jvmClockTests??0,scope:'Alarm date validation, bundled HTML startup, local resource handling and safe next-occurrence Clock handoff'},
   uiFunctionalTests:refinementOnly?{passed:refinementChecks.passed,failed:0,scope:refinementChecks.scope,cases:refinementChecks.checks,existingFunctionalTests:refinementChecks.existingFunctionalTests??null}:{passed:functional.length,failed:0,cases:functional.map(s=>s.title)},
   uiCaptureTests:refinementOnly?{passed:refinementChecks.captures.length,failed:0,unit:'viewport screenshots'}:{passed:capture.length,failed:0},screenshots:refinementOnly?refinementChecks.captures.map(c=>c.path):wholeCapturePacket?.version===packageInfo.version?wholeCapturePacket.captures.map(c=>c.path):ui.map(n=>'.impeccable/review/'+n+'.png'),
-  previousUIRegression:refinementOnly?{historical:true,report:'reports/ui-results.json',stats:uiReport.stats}:null,
+  previousUIRegression:refinementOnly?{historical:!courseAdjustments,report:courseAdjustments?'reports/adjustments-functional-results.json':'reports/ui-results.json',stats:uiReport.stats}:null,
   additionalUICaptureReports:extraUICaptures.map(r=>({...r,historical:refinementOnly})),
   designReview:todayReview??{...(harmonyOnly?harmonyUIReview:clockReview??{disposition:'pending'}),historical:true,currentUpdate:'Historical interface review; no current daily-home verdict available'},
   harmonyPreviewCaptures:harmonyCaptures?{...harmonyCaptures,historical:true}:null,
@@ -109,4 +111,4 @@ const summary={
   timetableImportValidation,realUserPDFReceived:Boolean(timetableImportValidation?.realDocumentsValidated),lockScreenAlarmTestedThisUpdate:!localOnly&&Boolean(androidDevice?.lockScreenAlarmTested),lockScreenAlarmPassedThisUpdate:!localOnly&&Boolean(androidDevice?.lockScreenAlarmPassed),files
 };
 await writeFile('reports/validation.json',JSON.stringify(summary,null,2));
-console.log(refinementOnly?'界面局部验证已保存：'+refinementChecks.passed+' 项局部检查、'+refinementChecks.captures.length+' 张截图、Android JVM '+summary.androidJvmTests.passed+' 项；旧版全量规则和界面检查保留为历史。':harmonyOnly?'鸿蒙验证记录已保存：规则 '+corePassed+' 项，桥接逻辑 '+harmonyBridgeTests.passed+' 项，浏览器功能 '+functional.length+' 项与截图检查 '+capture.length+' 项；鸿蒙不签名、不安装，响铃未实测。':'验证记录已保存：规则 '+corePassed+' 项，浏览器功能 '+functional.length+' 项，截图记录 '+capture.length+' 项，Android JVM '+summary.androidJvmTests.passed+' 项；设备结论按 APK 哈希单独记录。');
+console.log(courseAdjustments?'单门调课验证已保存：规则 '+corePassed+' 项、浏览器功能 '+functional.length+' 项、'+refinementChecks.captures.length+' 张截图、Android JVM '+summary.androidJvmTests.passed+' 项；两端编译通过，未安装、未实测响铃。':refinementOnly?'界面局部验证已保存：'+refinementChecks.passed+' 项局部检查、'+refinementChecks.captures.length+' 张截图、Android JVM '+summary.androidJvmTests.passed+' 项；旧版全量规则和界面检查保留为历史。':harmonyOnly?'鸿蒙验证记录已保存：规则 '+corePassed+' 项，桥接逻辑 '+harmonyBridgeTests.passed+' 项，浏览器功能 '+functional.length+' 项与截图检查 '+capture.length+' 项；鸿蒙不签名、不安装，响铃未实测。':'验证记录已保存：规则 '+corePassed+' 项，浏览器功能 '+functional.length+' 项，截图记录 '+capture.length+' 项，Android JVM '+summary.androidJvmTests.passed+' 项；设备结论按 APK 哈希单独记录。');
