@@ -21,6 +21,11 @@ public final class ClockTimeTest {
         long seconds=now+31_000;long test=ClockTime.testAt(seconds);
         check(test-seconds>=60_000&&test-seconds<120_000&&test%60_000==0);
         check(ClockTime.requireNextOccurrence(at("2026-10-15T23:00:00Z"),now,ZoneId.of("Europe/London")).getHour()==0);
-        System.out.println("Android JVM system Clock dates: 11 checks passed");
+        ClockTime.requireTomorrowCourse("2026-10-16",now);
+        for(String bad:new String[]{"2026-10-15","2026-10-17","bad"}){
+            boolean rejected=false;try{ClockTime.requireTomorrowCourse(bad,now);}catch(IllegalArgumentException expected){rejected=true;}check(rejected);
+        }
+        ClockTime.requireTomorrowCourse("2026-10-16",at("2026-10-15T15:59:00Z"));
+        System.out.println("Android JVM system Clock dates: 16 checks passed");
     }
 }

@@ -68,7 +68,7 @@ public final class MainActivity extends Activity {
     }
     private void createInterface() {
         container = new FrameLayout(this);
-        container.setBackgroundColor(0xfff6f8f7);
+        container.setBackgroundColor(0xfff4f6fb);
         setContentView(container);
         if (Build.VERSION.SDK_INT >= 33)
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
@@ -199,7 +199,7 @@ public final class MainActivity extends Activity {
         });
     }
     private void createStartupPanel() {
-        startupPanel = new ScrollView(this); startupPanel.setFillViewport(true); startupPanel.setBackgroundColor(0xfff6f8f7);
+        startupPanel = new ScrollView(this); startupPanel.setFillViewport(true); startupPanel.setBackgroundColor(0xfff4f6fb);
         LinearLayout body = new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); body.setGravity(android.view.Gravity.CENTER_VERTICAL);
         int pad = Math.round(24 * getResources().getDisplayMetrics().density); body.setPadding(pad, pad, pad, pad);
         startupTitle = new TextView(this); startupTitle.setTextSize(24); startupTitle.setTextColor(0xff164b42); body.addView(startupTitle);
@@ -285,7 +285,7 @@ public final class MainActivity extends Activity {
                             if(!"showClockAlarms".equals(action))new AlarmStore(MainActivity.this).cancelAllOwned();
                             SystemClock clock=new SystemClock(MainActivity.this);
                             JSONObject result="showClockAlarms".equals(action)?clock.show(MainActivity.this)
-                                :clock.open(MainActivity.this,payload.optJSONObject("plan"),"testClockAlarm".equals(action));
+                                :clock.open(MainActivity.this,payload.optJSONObject("plan"),"testClockAlarm".equals(action),payload.optBoolean("force",false));
                             reply(m,result,null);
                         }catch(Exception error){reply(m,null,error.getMessage());}
                     }
@@ -304,7 +304,8 @@ public final class MainActivity extends Activity {
                 case "capabilities":
                     data = alarms.capabilities();
                     JSONObject clockCaps=new SystemClock(this).capabilities();
-                    data.put("clockAvailable",clockCaps.getBoolean("clockAvailable")).put("clockApp",clockCaps.getString("clockApp"));
+                    data.put("clockAvailable",clockCaps.getBoolean("clockAvailable")).put("clockApp",clockCaps.getString("clockApp"))
+                        .put("lastClockRequest",clockCaps.opt("lastClockRequest"));
                     break;
                 case "loadState":
                     String value = storage.getString("state", "");

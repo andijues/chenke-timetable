@@ -1,4 +1,4 @@
-const VERSION='chenke-v5-timetable-layout-0.2.5';
+const VERSION='chenke-v6-today-clock-0.3.0';
 const SHELL=['./','./index.html','./app.js','./style.css','./icon.svg','./manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(VERSION).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('chenke-')&&k!==VERSION).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

@@ -23,7 +23,7 @@ for(const [device,width,height] of [['desktop',1280,1000],['phone',390,844],['us
     await expect(page.locator('#week-summary')).toContainText('3,5,7周');await expect(page.locator('[data-week][aria-pressed=true]')).toHaveCount(3);
     await page.screenshot({path:`.impeccable/review/schedule-${device}-course.png`});await page.getByRole('button',{name:'保存课程',exact:true}).click();
     await expect(page.locator('#course-dialog')).not.toBeVisible();await page.getByRole('button',{name:'课表',exact:true}).click();await expect(page.locator('.wake-time')).toContainText('07:30');
-    await page.locator('#view-week').selectOption('4');await expect(page.locator('.course-block')).toHaveCount(0);await page.locator('#view-week').selectOption('5');await expect(page.locator('.course-block')).toHaveCount(1);
+    await page.getByRole('button',{name:'周课表',exact:true}).click();await page.locator('#view-week').selectOption('4');await expect(page.locator('.course-block')).toHaveCount(0);await page.locator('#view-week').selectOption('5');await expect(page.locator('.course-block')).toHaveCount(1);
     await page.getByRole('button',{name:'设置',exact:true}).click();
     for(const [name,value] of [['p0s','09:30'],['p0e','10:15'],['p1s','10:25'],['p1e','11:10']])await page.locator(`#periods-form [name=${name}]`).fill(value);
     await page.getByRole('button',{name:'保存节次时间',exact:true}).click();await page.getByRole('button',{name:'课表',exact:true}).click();

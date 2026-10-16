@@ -93,6 +93,7 @@ export function validateState(raw) {
   if (!Number.isInteger(s.leadMinutes) || s.leadMinutes < 0 || s.leadMinutes > 1440 || !Number.isFinite(minutes(s.morningEnd))) throw Error('起床规则不正确');
   if (s.timezone !== ZONE || typeof s.enabled !== 'boolean') throw Error('当前版本仅支持中国标准时间，闹钟开关应为布尔值');
   if (s.androidAlarmMode !== undefined && !['clock','app'].includes(s.androidAlarmMode)) throw Error('安卓响铃方式无效');
+  if (s.alarmSkippedDates !== undefined && (!Array.isArray(s.alarmSkippedDates) || s.alarmSkippedDates.length > 60 || s.alarmSkippedDates.some(date => !validDate(date)) || new Set(s.alarmSkippedDates).size !== s.alarmSkippedDates.length)) throw Error('暂停闹钟的日期无效');
   const periodErrors = validatePeriods(s.periods); if (periodErrors.length) throw Error(periodErrors[0]);
   if (s.periodsByDay !== undefined) {
     if (!s.periodsByDay || typeof s.periodsByDay !== 'object' || Array.isArray(s.periodsByDay)) throw Error('每日节次格式不正确');
@@ -132,6 +133,7 @@ export function morningPlan(state, date) {
   const all = coursesOn(state, date);
   const morning = all.filter(c => minutes(c.start) < minutes(state.settings.morningEnd));
   if (!morning.length) return {date, status: 'rest', reason: '上午无课', firstCourse: null, alarmAt: null};
+  if (state.settings.alarmSkippedDates?.includes(date)) return {date,status:'paused',reason:'这天的起床闹钟已暂停，课程照常显示',firstCourse:morning[0],alarmAt:null};
   if (morning.some(c => !c.confirmed)) return {date, status: 'review', reason: '上午课程尚未全部确认', firstCourse: morning[0], alarmAt: null};
   const first = morning[0];
   const startDate = new Date(`${date}T${first.start}:00+08:00`);

@@ -26,11 +26,11 @@ for(const [name,width,height] of [['small-phone',320,740],['phone',390,844],['la
     await dialog.locator('[name=confirmed]').check();
     mkdirSync('.impeccable/review',{recursive:true});await page.screenshot({path:`.impeccable/review/${name}-editor.png`});
     await page.getByRole('button',{name:'保存课程',exact:true}).tap();await expect(dialog).not.toBeVisible();
-    await expectNoPageOverflow(page);await expect(page.locator('.time-pointer')).toBeVisible();
+    await expectNoPageOverflow(page);await page.getByRole('button',{name:'周课表',exact:true}).click();await expect(page.locator('.time-pointer')).toBeVisible();
     await expectTouchSize(page.locator('.week-navigation button,.schedule-foot button,.bottom-nav button'));
     const nav=await page.locator('.bottom-nav').boundingBox();expect(nav.y+nav.height).toBeCloseTo(height,0);
     await page.screenshot({path:`.impeccable/review/${name}-home.png`,fullPage:true});
-    await page.getByRole('button',{name:'闹钟',exact:true}).tap();await expect(page.locator('.alarm-day').nth(1)).toContainText('07:00');
+    await page.getByRole('button',{name:'闹钟',exact:true}).tap();await expect(page.locator('.alarm-day').nth(0)).toContainText('07:00');
     await expect(page.locator('.native-status')).toContainText('网页');await expect(page.locator('#lead-input')).toHaveAttribute('inputmode','numeric');
     await expectTouchSize(page.locator('#alarm-enabled,#lead-slider'));await expectNoPageOverflow(page);
     await page.screenshot({path:`.impeccable/review/${name}-alarms.png`,fullPage:true});

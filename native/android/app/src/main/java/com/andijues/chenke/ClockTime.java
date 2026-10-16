@@ -8,6 +8,10 @@ import java.time.ZonedDateTime;
 public final class ClockTime {
     private ClockTime() {}
     public static long testAt(long now) { return Math.floorDiv(now + 119_999L, 60_000L) * 60_000L; }
+    public static void requireTomorrowCourse(String courseDate,long now) {
+        String tomorrow=Instant.ofEpochMilli(now).atZone(ZoneId.of("Asia/Shanghai")).toLocalDate().plusDays(1).toString();
+        if(!tomorrow.equals(courseDate))throw new IllegalArgumentException("自动系统时钟仅安排明天课程，请重新计算明日起床计划。");
+    }
     public static ZonedDateTime requireNextOccurrence(long at, long now, ZoneId zone) {
         if (at % 60_000L != 0 || at - now < 60_000L)
             throw new IllegalArgumentException("距离起床时间不足 1 分钟，请直接在手机时钟中核对设置。");
