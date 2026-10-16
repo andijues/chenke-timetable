@@ -1820,8 +1820,8 @@ input:not([type=range]):not([type=checkbox]),textarea,select{border-radius:10px;
 .date-chip i{width:4px;height:4px;border-radius:50%;background:transparent;margin-top:3px}.date-chip i.has-course{background:#9aa9c5}
 .date-chip.is-today:not(.selected){background:var(--soft)}.date-chip.selected{background:var(--green);color:#fff}
 .date-chip.selected strong{color:#fff}.date-chip.selected i.has-course{background:#fff}
-.today-workspace{display:grid;grid-template-columns:minmax(0,1fr) 280px;grid-template-areas:'next wake' 'schedule wake' 'schedule note';gap:26px}
-.today-workspace.no-next{grid-template-areas:'schedule wake' 'schedule note'}.next-area:empty{display:none}
+.today-workspace{display:grid;grid-template-columns:minmax(0,1fr) 280px;grid-template-areas:'next wake' 'schedule wake';gap:26px}
+.today-workspace.no-next{grid-template-areas:'schedule wake'}.next-area:empty{display:none}
 .next-area{grid-area:next;min-width:0}.wake-area{grid-area:wake;min-width:0}.today-schedule{grid-area:schedule;min-width:0}.dashboard-note{grid-area:note}
 .next-lesson{background:var(--next-bg);color:var(--next-ink);padding:22px 24px;border-radius:16px}
 .next-heading{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:15px}
@@ -2082,3 +2082,12 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
   .time-mode-buttons>button[aria-pressed=true]{background:#4268e1;color:#fff}#course-dialog::backdrop{background:#080c17aa}.danger{color:var(--danger)}.danger:hover{color:#ffd0db}
 }
 
+
+/* Keep task information visible; show longer guidance on demand. */
+.import-layout{grid-template-columns:minmax(0,1fr);max-width:980px}
+.usage-help{margin-top:18px;color:var(--muted);font-size:14px;line-height:1.8}
+.usage-help summary{cursor:pointer;min-height:44px;padding-block:10px;color:var(--ink)}
+.usage-help p{margin-top:8px;max-width:65ch}
+.usage-help .text-button{margin-top:8px}
+.management-toolbar{justify-content:flex-end}
+.schedule-foot{justify-content:flex-end}

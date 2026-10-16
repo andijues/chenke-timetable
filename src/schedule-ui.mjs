@@ -22,10 +22,10 @@ export function weeksEditor(course, settings) {
     <h3 id="course-weeks-title">上课周次</h3>
     <div class="form-pair week-range-fields"><label>从第几周<input id="week-start" type="number" inputmode="numeric" min="1" max="${settings.totalWeeks}" value="${rule.start}"></label><label>到第几周<input id="week-end" type="number" inputmode="numeric" min="1" max="${settings.totalWeeks}" value="${rule.end}"></label></div>
     <div class="week-patterns" aria-label="周次规则">${[['all','每周'],['odd','单周'],['even','双周']].map(([value,label])=>`<button type="button" data-week-pattern="${value}" aria-pressed="${rule.pattern === value}">${label}</button>`).join('')}</div>
-    <p class="helper">单双周按学期周数计算，也可点选下面的具体周次。</p>
+
     <div id="week-calendar" class="week-calendar" aria-label="选择上课周次">${Array.from({length:settings.totalWeeks},(_,i)=>`<button type="button" data-week="${i+1}" aria-label="第 ${i+1} 周" aria-pressed="${course.weeks.includes(i+1)}">${i+1}</button>`).join('')}</div>
     <p id="week-summary" class="selection-summary">${escape(weekSummary(course.weeks,settings,course.day))}</p>
-    <label class="week-text-label">周次文字（也可直接输入）<input name="weeks" value="${escape(formatWeeks(course.weeks).replace('周',''))}" placeholder="例如 3-12单，或 1,3,8-10" required></label>
+    <label class="week-text-label">周次文字<input name="weeks" value="${escape(formatWeeks(course.weeks).replace('周',''))}" placeholder="例如 3-12单，或 1,3,8-10" required></label>
   </section>`;
 }
 
@@ -71,6 +71,6 @@ export function periodsEditor(settings, scope='common', activeIndex=0) {
     <div id="period-slider-panel">${periodSliders(periods,activeIndex)}</div>
     <details class="period-precise"><summary>精确填写每节起止时间</summary><div class="period-grid">${periods.map((p,i)=>`<div class="period-row"><strong>第 ${i+1} 节</strong><label><span class="sr-only">第 ${i+1} 节开始时间</span><input type="time" name="p${i}s" value="${escape(p.start)}" data-period-index="${i}" data-period-part="start" required aria-label="第 ${i+1} 节开始"></label><span>至</span><label><span class="sr-only">第 ${i+1} 节结束时间</span><input type="time" name="p${i}e" value="${escape(p.end)}" data-period-index="${i}" data-period-part="end" required aria-label="第 ${i+1} 节结束"></label></div>`).join('')||'<p class="helper">当天不按节次排课，仍可按具体时间手动添加课程。</p>'}</div></details>
     <p id="period-error" class="form-error" role="alert">${escape(errors[0]??'')}</p>
-    <div class="period-save"><button class="button" type="submit">保存节次时间</button><span>按节次录入的课程会跟随更新；直接填写的时间保留。</span></div>
+    <div class="period-save"><button class="button" type="submit">保存节次时间</button><span>按节次排课的课程将同步更新。</span></div>
   </form>`;
 }
